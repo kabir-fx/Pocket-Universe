@@ -3,21 +3,28 @@
 import { useState, type FormEvent } from "react";
 import styles from "./auth-card.module.css";
 
-export interface AuthCardProps {
+export interface SignupCardProps {
   title?: string;
   submitting?: boolean;
   errorMessage?: string | null;
-  onSubmit: (args: { username: string; password: string }) => Promise<void> | void;
-  footer?: React.ReactNode;
+  onSubmit: (args: { username: string; password: string; email: string }) => Promise<void> | void;
+  submitLabel?: string;
 }
 
-export function AuthCard({ title = "Sign in", submitting = false, errorMessage, onSubmit, footer }: AuthCardProps) {
+export function SignupCard({
+  title = "Create your account",
+  submitting = false,
+  errorMessage,
+  onSubmit,
+  submitLabel = "Sign up",
+}: SignupCardProps) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [email, setEmail] = useState("");
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    await onSubmit({ username, password });
+    await onSubmit({ username, password, email });
   }
 
   return (
@@ -25,6 +32,19 @@ export function AuthCard({ title = "Sign in", submitting = false, errorMessage, 
       <form onSubmit={handleSubmit} className={styles.card}>
         <h1 className={styles.title}>{title}</h1>
         {errorMessage ? <div className={styles.error}>{errorMessage}</div> : null}
+
+        <label htmlFor="email" className={styles.label}>Email</label>
+        <input
+          id="email"
+          name="email"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className={styles.input}
+          placeholder="Enter email"
+          required
+          autoComplete="email"
+        />
 
         <label htmlFor="username" className={styles.label}>Username</label>
         <input
@@ -34,7 +54,7 @@ export function AuthCard({ title = "Sign in", submitting = false, errorMessage, 
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           className={styles.input}
-          placeholder="Enter username"
+          placeholder="Choose a username"
           required
           autoComplete="username"
         />
@@ -47,20 +67,19 @@ export function AuthCard({ title = "Sign in", submitting = false, errorMessage, 
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           className={styles.input}
-          placeholder="Enter password"
+          placeholder="Create a password"
           required
-          autoComplete="current-password"
+          autoComplete="new-password"
         />
 
         <button type="submit" disabled={submitting} className={styles.button} data-submitting={submitting}>
-          {submitting ? "Signing in…" : "Sign in"}
+          {submitting ? "Creating…" : submitLabel}
         </button>
-        <div className={styles.footer}>{footer}</div>
       </form>
     </div>
   );
 }
 
-export default AuthCard;
+export default SignupCard;
 
 

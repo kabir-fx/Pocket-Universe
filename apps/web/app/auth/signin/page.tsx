@@ -4,6 +4,7 @@ import { Suspense, useState } from "react";
 import { signIn } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import { AuthCard } from "@repo/ui/auth-card";
+import Link from "next/link";
 
 function SignInInner() {
     const [submitting, setSubmitting] = useState(false);
@@ -29,6 +30,7 @@ function SignInInner() {
             submitting={submitting}
             errorMessage={errorParam ? "Invalid credentials. Please try again." : null}
             onSubmit={handleSubmit}
+            footer={<span>Don't have an account? <Link href="/auth/signup">Sign up</Link></span>}
         />
     );
 }

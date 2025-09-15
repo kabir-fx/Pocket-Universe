@@ -64,4 +64,21 @@
   margin-bottom: 8px;
 }
 
+.footer {
+  margin-top: 12px;
+  font-size: 13px;
+  color: #b5b5b5;
+  display: flex;
+  justify-content: center;
+}
+
+.footer a {
+  color: #6ca8ff;
+  text-decoration: none;
+}
+
+.footer a:hover {
+  text-decoration: underline;
+}
+
 

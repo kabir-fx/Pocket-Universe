@@ -6,6 +6,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 export const authOptions = {
     pages: {
         signIn: "/auth/signin",
+        signUp: "/auth/signup"
     },
     // Configure one or more authentication providers
     providers: [
