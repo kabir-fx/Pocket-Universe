@@ -13,9 +13,35 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model user {
+model User {
   id              String          @id             @default(cuid())
   username        String          @unique
   password        String
   email           String
+  galaxies        Galaxy[]
+  planets         Planet[]
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+}
+
+model Galaxy {
+  id              String          @id             @default(cuid())
+  name            String          @unique
+  user            User            @relation(fields: [userId], references: [id])
+  userId          String
+  planets         Planet[]        
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  shareable       Boolean
+}
+
+model Planet {
+  id              String          @id             @default(cuid())
+  title           String
+  content         String
+  user            User            @relation(fields: [userId], references: [id])
+  userId          String        
+  galaxies        Galaxy[]        
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
 }
