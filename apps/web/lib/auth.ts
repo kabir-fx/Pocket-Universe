@@ -1,4 +1,5 @@
 import prisma from "@repo/db/prisma";
+import { SessionStrategy } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 // import GithubProvider from "next-auth/providers/github";
 // import GoogleProvider from "next-auth/providers/google";
@@ -57,6 +58,21 @@ export const authOptions = {
                 }
             }
         })
-
     ],
+
+    session: { strategy: "jwt" as SessionStrategy },
+    
+    callbacks: {
+        async jwt({ token, user }: any) {
+            if (user?.id) token.sub = user.id;
+
+            return token;
+        },
+
+        async session({ session, token }: any) {
+            session.user = { ...session.user, id: token.sub as string };
+
+            return session;
+        }
+    }
 }  

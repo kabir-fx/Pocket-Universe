@@ -17,7 +17,7 @@ function SignInInner() {
             await signIn("credentials", {
                 username,
                 password,
-                callbackUrl: "/dashboard",
+                callbackUrl: "/playground",
                 redirect: true,
             });
         } finally {
