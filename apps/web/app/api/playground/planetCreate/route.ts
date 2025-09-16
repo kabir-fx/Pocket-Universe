@@ -8,8 +8,21 @@ export async function POST(req: NextRequest) {
     if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized "}, { status: 401 });
 
     const { galaxy, planet } = await req.json();
-    if (!planet) return;
 
-    // await prisma.planet.
+    const res = await prisma.planet.create({
+        data: {
+            userId: session.user.id,
+            content: planet,
+            galaxies: {
+                connect: { name: galaxy }
+            }
+        }
+    });
+
+    if (!res) {
+        return NextResponse.json({ error: "Failed Planet Creation "}, { status: 400 });
+    }
+
+    return NextResponse.json(res);
 
 }

@@ -10,10 +10,13 @@ export async function GET() {
     }
 
     const res = await prisma.galaxy.findMany({
-        where: {
-            userId: session.user.id
+        where: { userId: session.user.id },
+        select: {
+          id: true,
+          name: true,
+          _count: { select: { planets: true } }
         }
-    })
+      });
 
     if (!res) {
         return NextResponse.json({ msg: "Emptyyy"}, {status: 400 });
