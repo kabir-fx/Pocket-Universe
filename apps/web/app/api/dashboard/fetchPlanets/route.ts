@@ -14,6 +14,14 @@ export async function GET() {
         select: {
           id: true,
           name: true,
+          planets: {
+            select: {
+              id: true,
+              content: true,
+              createdAt: true
+            },
+            orderBy: { createdAt: 'desc' }
+          },
           _count: { select: { planets: true } }
         }
       });

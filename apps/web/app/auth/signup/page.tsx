@@ -33,6 +33,8 @@ export default function SignUpPage() {
 
     return (
         <SignupCard
+            title="Join us today"
+            subtitle="Create your account to get started"
             submitting={submitting}
             errorMessage={error}
             onSubmit={handleSubmit}

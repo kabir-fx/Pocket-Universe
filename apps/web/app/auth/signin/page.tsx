@@ -27,10 +27,12 @@ function SignInInner() {
 
     return (
         <AuthCard
+            title="Welcome back"
+            subtitle="Sign in to your account to continue"
             submitting={submitting}
             errorMessage={errorParam ? "Invalid credentials. Please try again." : null}
             onSubmit={handleSubmit}
-            footer={<span>Don't have an account? <Link href="/auth/signup">Sign up</Link></span>}
+            footer={<span>Don&apos;t have an account? <Link href="/auth/signup">Sign up</Link></span>}
         />
     );
 }

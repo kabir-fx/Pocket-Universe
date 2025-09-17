@@ -5,6 +5,7 @@ import styles from "./auth-card.module.css";
 
 export interface SignupCardProps {
   title?: string;
+  subtitle?: string;
   submitting?: boolean;
   errorMessage?: string | null;
   onSubmit: (args: { username: string; password: string; email: string }) => Promise<void> | void;
@@ -13,6 +14,7 @@ export interface SignupCardProps {
 
 export function SignupCard({
   title = "Create your account",
+  subtitle,
   submitting = false,
   errorMessage,
   onSubmit,
@@ -31,6 +33,7 @@ export function SignupCard({
     <div className={styles.container}>
       <form onSubmit={handleSubmit} className={styles.card}>
         <h1 className={styles.title}>{title}</h1>
+        {subtitle && <p className={styles.subtitle}>{subtitle}</p>}
         {errorMessage ? <div className={styles.error}>{errorMessage}</div> : null}
 
         <label htmlFor="email" className={styles.label}>Email</label>

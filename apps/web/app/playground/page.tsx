@@ -10,17 +10,22 @@ function Homeer() {
     const errorParam = searchParams.get("error");
 
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
+    const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-    async function handleSubmit({ galaxy, planet }: { galaxy?: string; planet: string }) {
+    async function handleSubmit({ galaxy, planet, onSuccess }: { galaxy?: string; planet: string; onSuccess?: () => void }) {
         if (!planet) return;
 
         setSubmitting(true);
+        setErrorMsg(null);
+        setSuccessMsg(null);
+        
         try {
-            if (galaxy) {   
+            // Only call galaxyCheck if galaxy is provided and not empty
+            if (galaxy && galaxy.trim()) {   
                 const galaxyRes = await fetch("/api/playground/galaxyCheck", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ galaxy: galaxy })
+                    body: JSON.stringify({ galaxy: galaxy.trim() })
                 });
                 
                 if (!galaxyRes.ok) {
@@ -28,7 +33,6 @@ function Homeer() {
                     
                     if (galaxyRes.status === 401) {
                         setErrorMsg("Please sign in to continue.");
-                        
                         return;
                     }
                     
@@ -42,7 +46,7 @@ function Homeer() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     planet: planet,
-                    galaxy: galaxy
+                    galaxy: galaxy && galaxy.trim() ? galaxy.trim() : undefined
                 })
             })
 
@@ -51,12 +55,17 @@ function Homeer() {
 
                 if (planetRes.status === 401) {
                     setErrorMsg("Please sign in to continue.");
-                    
                     return;
                 }
                 
                 setErrorMsg(body?.error || "Planet creation failed");
                 return;
+            }
+
+            // Success!
+            setSuccessMsg("Planet created successfully!");
+            if (onSuccess) {
+                onSuccess();
             }
 
         } finally {
@@ -66,8 +75,11 @@ function Homeer() {
 
     return (
         <PlgCard
+            title="Create Your Universe"
+            subtitle="Build galaxies and planets to organize your thoughts and ideas"
             submitting={submitting}
             errorMsg={errorMsg ?? (errorParam ? "Invalid input" : null)}
+            successMsg={successMsg}
             onSubmit={handleSubmit}
         />
     );

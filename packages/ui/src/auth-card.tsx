@@ -5,13 +5,21 @@ import styles from "./auth-card.module.css";
 
 export interface AuthCardProps {
   title?: string;
+  subtitle?: string;
   submitting?: boolean;
   errorMessage?: string | null;
   onSubmit: (args: { username: string; password: string }) => Promise<void> | void;
   footer?: React.ReactNode;
 }
 
-export function AuthCard({ title = "Sign in", submitting = false, errorMessage, onSubmit, footer }: AuthCardProps) {
+export function AuthCard({
+  title = "Sign in",
+  subtitle,
+  submitting = false,
+  errorMessage,
+  onSubmit,
+  footer
+}: AuthCardProps) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 
@@ -24,6 +32,7 @@ export function AuthCard({ title = "Sign in", submitting = false, errorMessage, 
     <div className={styles.container}>
       <form onSubmit={handleSubmit} className={styles.card}>
         <h1 className={styles.title}>{title}</h1>
+        {subtitle && <p className={styles.subtitle}>{subtitle}</p>}
         {errorMessage ? <div className={styles.error}>{errorMessage}</div> : null}
 
         <label htmlFor="username" className={styles.label}>Username</label>

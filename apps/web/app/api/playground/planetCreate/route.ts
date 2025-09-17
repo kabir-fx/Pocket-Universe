@@ -13,9 +13,11 @@ export async function POST(req: NextRequest) {
         data: {
             userId: session.user.id,
             content: planet,
-            galaxies: {
-                connect: { name: galaxy }
-            }
+            ...(galaxy && {
+                galaxies: {
+                    connect: { name: galaxy }
+                }
+            })
         }
     });
 
