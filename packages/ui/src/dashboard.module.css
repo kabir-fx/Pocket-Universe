@@ -1,33 +1,47 @@
 .wrapper {
   min-height: 100vh;
-  background: #f9fafb;
-  padding: 24px 16px;
+  /* Vibrant cyan → blue → violet gradient to match site brightness */
+  background: linear-gradient(135deg, #06b6d4 0%, #3b82f6 50%, #a855f7 100%);
+  padding: 56px 16px;
+  position: relative;
+}
+
+.wrapper::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(800px 800px at 10% -10%, rgba(255, 255, 255, 0.28), transparent 60%),
+    radial-gradient(600px 600px at 90% 0%, rgba(255, 255, 255, 0.18), transparent 55%);
+  pointer-events: none;
 }
 
 .container {
-  max-width: 64rem;
+  max-width: 72rem;
   margin: 0 auto;
 }
 
 .title {
-  font-size: 28px;
+  font-size: 36px;
   font-weight: 800;
-  color: #111827;
+  color: #ffffff;
 }
 
 .subtitle {
-  margin-top: 4px;
-  color: #6b7280;
+  margin-top: 8px;
+  color: rgba(255, 255, 255, 0.9);
 }
 
-.stack { margin-top: 16px; display: grid; gap: 12px; }
+.stack { margin-top: 20px; display: grid; gap: 16px; }
 
 /* Card */
 .card {
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  background: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(10px);
   overflow: hidden;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
 }
 
 .cardHeader {
@@ -35,19 +49,19 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 14px 16px;
+  padding: 16px 18px;
   cursor: pointer;
 }
 
-.cardTitle { font-weight: 600; color: #111827; }
-.cardMeta { color: #6b7280; font-size: 12px; }
+.cardTitle { font-weight: 700; color: #0f172a; }
+.cardMeta { color: #64748b; font-size: 12px; }
 
-.divider { border-top: 1px solid #e5e7eb; }
+.divider { border-top: 1px solid rgba(15, 23, 42, 0.1); }
 
 .planetRow { display: flex; align-items: center; gap: 10px; padding: 12px 16px; }
-.dot { width: 6px; height: 6px; border-radius: 999px; background:#2563eb }
-.planetContent { color: #111827; font-size: 14px; flex: 1; }
-.planetTime { color: #6b7280; font-size: 12px; }
+.dot { width: 6px; height: 6px; border-radius: 999px; background: #a855f7 }
+.planetContent { color: #0f172a; font-size: 14px; flex: 1; }
+.planetTime { color: #475569; font-size: 12px; }
 
 /* Copy button */
 .copyBtn {
@@ -62,29 +76,29 @@
   align-items: center;
 }
 
-.copyBtn:hover { background: #f3f4f6; color: #111827; }
+.copyBtn:hover { background: rgba(15, 23, 42, 0.06); color: #0f172a; }
 .copyIcon { width: 14px; height: 14px; }
 .copyOk { color: #10b981; }
 
 /* Loading */
 .loadingWrap { display: flex; align-items: center; justify-content: center; padding: 32px 0; }
-.spinner { width: 16px; height: 16px; border: 2px solid #d1d5db; border-top-color: #2563eb; border-radius: 999px; animation: spin .6s linear infinite; }
-.loadingText { margin-left: 8px; color: #6b7280; font-size: 14px; }
+.spinner { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.6); border-top-color: #fff; border-radius: 999px; animation: spin .6s linear infinite; }
+.loadingText { margin-left: 8px; color: rgba(255, 255, 255, 0.95); font-size: 14px; }
 
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* Dark */
 @media (prefers-color-scheme: dark) {
-  .wrapper { background: #0b0f14; }
+  .wrapper { background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 50%, #a855f7 100%); }
   .title { color: #e5e7eb; }
-  .subtitle { color: #9ca3af; }
-  .card { background: #0f172a; border-color: #1f2937; }
-  .cardMeta { color: #9ca3af; }
-  .cardTitle { color: #e5e7eb; }
-  .divider { border-top-color: #1f2937; }
-  .planetContent { color: #e5e7eb; }
-  .planetTime { color: #9ca3af; }
-  .copyBtn:hover { background: #374151; color: #e5e7eb; }
+  .subtitle { color: #e2e8f0; }
+  .card { background: rgba(15, 23, 42, 0.9); border-color: rgba(255, 255, 255, 0.16); }
+  .cardMeta { color: #94a3b8; }
+  .cardTitle { color: #e2e8f0; }
+  .divider { border-top-color: rgba(255, 255, 255, 0.08); }
+  .planetContent { color: #e2e8f0; }
+  .planetTime { color: #94a3b8; }
+  .copyBtn:hover { background: rgba(255, 255, 255, 0.06); color: #e2e8f0; }
   .copyOk { color: #34d399; }
 }
 
