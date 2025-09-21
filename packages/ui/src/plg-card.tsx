@@ -55,7 +55,6 @@ export function PlgCard({
           <div className={styles.section}>
             <div className={styles.sectionTitle}>
               <FolderIcon className="w-4 h-4" />
-              Galaxy (Optional)
             </div>
             <label htmlFor="galaxy" className={styles.label}>
               Galaxy Name
@@ -78,7 +77,6 @@ export function PlgCard({
           <div className={styles.section}>
             <div className={styles.sectionTitle}>
               <SparklesIcon className="w-4 h-4" />
-              Planet
             </div>
             <label htmlFor="planet" className={styles.label}>
               Planet Content
