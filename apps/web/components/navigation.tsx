@@ -50,7 +50,7 @@ export function Navigation() {
                             <>
                                 <div className={styles.user}>
                                     <UserIcon className={styles.icon} />
-                                    <span>{session.user?.name || session.user?.email}</span>
+                                    <span>{session.user?.name}</span>
                                 </div>
                                 <button
                                     onClick={() => signOut({ callbackUrl: "/" })}

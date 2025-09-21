@@ -64,13 +64,21 @@ export const authOptions = {
     
     callbacks: {
         async jwt({ token, user }: any) {
-            if (user?.id) token.sub = user.id;
-
+            if (user) {
+                token.sub = user.id;
+                // Populate the name of the token with username to pass on to display on navbar
+                token.name = user.username;
+            }
             return token;
         },
 
         async session({ session, token }: any) {
-            session.user = { ...session.user, id: token.sub as string };
+            session.user = {
+                ...session.user,
+                id: token.sub as string,
+                // Bring the username [from token.name] into the session
+                name: token.name as string
+            };
 
             return session;
         }
