@@ -8,7 +8,10 @@ export interface AuthCardProps {
   subtitle?: string;
   submitting?: boolean;
   errorMessage?: string | null;
-  onSubmit: (args: { username: string; password: string }) => Promise<void> | void;
+  onSubmit: (args: {
+    username: string;
+    password: string;
+  }) => Promise<void> | void;
   footer?: React.ReactNode;
 }
 
@@ -18,7 +21,7 @@ export function AuthCard({
   submitting = false,
   errorMessage,
   onSubmit,
-  footer
+  footer,
 }: AuthCardProps) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -33,9 +36,13 @@ export function AuthCard({
       <form onSubmit={handleSubmit} className={styles.card}>
         <h1 className={styles.title}>{title}</h1>
         {subtitle && <p className={styles.subtitle}>{subtitle}</p>}
-        {errorMessage ? <div className={styles.error}>{errorMessage}</div> : null}
+        {errorMessage ? (
+          <div className={styles.error}>{errorMessage}</div>
+        ) : null}
 
-        <label htmlFor="username" className={styles.label}>Username</label>
+        <label htmlFor="username" className={styles.label}>
+          Username
+        </label>
         <input
           id="username"
           name="username"
@@ -48,7 +55,9 @@ export function AuthCard({
           autoComplete="username"
         />
 
-        <label htmlFor="password" className={styles.label}>Password</label>
+        <label htmlFor="password" className={styles.label}>
+          Password
+        </label>
         <input
           id="password"
           name="password"
@@ -61,7 +70,12 @@ export function AuthCard({
           autoComplete="current-password"
         />
 
-        <button type="submit" disabled={submitting} className={styles.button} data-submitting={submitting}>
+        <button
+          type="submit"
+          disabled={submitting}
+          className={styles.button}
+          data-submitting={submitting}
+        >
           {submitting ? "Signing in…" : "Sign in"}
         </button>
         <div className={styles.footer}>{footer}</div>
@@ -71,5 +85,3 @@ export function AuthCard({
 }
 
 export default AuthCard;
-
-

@@ -28,10 +28,10 @@ export function PlanetItem({ id, content, createdAt }: PlanetItemProps) {
     <div className={styles.planetRow}>
       <div className={styles.dot}></div>
       <div className={styles.planetContent}>{content}</div>
-      <button 
-        title="Copy to clipboard" 
-        aria-label="Copy planet content" 
-        className={styles.copyBtn} 
+      <button
+        title="Copy to clipboard"
+        aria-label="Copy planet content"
+        className={styles.copyBtn}
         onClick={handleCopy}
       >
         {copied ? (

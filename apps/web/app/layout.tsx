@@ -14,7 +14,8 @@ const geistMono = localFont({
 
 export const metadata: Metadata = {
   title: "Universe - Organize Your Thoughts",
-  description: "Create galaxies and planets to organize your thoughts and ideas",
+  description:
+    "Create galaxies and planets to organize your thoughts and ideas",
 };
 
 export default function RootLayout({
@@ -24,7 +25,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+      >
         <Providers>{children}</Providers>
       </body>
     </html>

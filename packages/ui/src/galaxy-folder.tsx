@@ -1,7 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDownIcon, ChevronRightIcon, FolderIcon } from "@heroicons/react/24/outline";
+import {
+  ChevronDownIcon,
+  ChevronRightIcon,
+  FolderIcon,
+} from "@heroicons/react/24/outline";
 import { PlanetItem } from "./planet-item";
 import styles from "./dashboard.module.css";
 
@@ -18,7 +22,12 @@ interface GalaxyFolderProps {
   planetCount: number;
 }
 
-export function GalaxyFolder({ id, name, planets, planetCount }: GalaxyFolderProps) {
+export function GalaxyFolder({
+  id,
+  name,
+  planets,
+  planetCount,
+}: GalaxyFolderProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -32,7 +41,9 @@ export function GalaxyFolder({ id, name, planets, planetCount }: GalaxyFolderPro
         <FolderIcon className={styles.icon} width={18} height={18} />
         <div>
           <div className={styles.cardTitle}>{name}</div>
-          <div className={styles.cardMeta}>{planetCount} planet{planetCount !== 1 ? 's' : ''}</div>
+          <div className={styles.cardMeta}>
+            {planetCount} planet{planetCount !== 1 ? "s" : ""}
+          </div>
         </div>
       </button>
 
@@ -52,7 +63,9 @@ export function GalaxyFolder({ id, name, planets, planetCount }: GalaxyFolderPro
           ) : (
             <div className={styles.planetRow}>
               <div className={styles.dot}></div>
-              <div className={styles.planetContent}>No planets in this galaxy yet</div>
+              <div className={styles.planetContent}>
+                No planets in this galaxy yet
+              </div>
             </div>
           )}
         </div>

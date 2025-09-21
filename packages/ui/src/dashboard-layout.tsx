@@ -12,7 +12,7 @@ interface DashboardLayoutProps {
 export function DashboardLayout({
   children,
   title = "Dashboard",
-  subtitle
+  subtitle,
 }: DashboardLayoutProps) {
   return (
     <div className={styles.wrapper}>

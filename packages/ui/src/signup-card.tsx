@@ -8,7 +8,11 @@ export interface SignupCardProps {
   subtitle?: string;
   submitting?: boolean;
   errorMessage?: string | null;
-  onSubmit: (args: { username: string; password: string; email: string }) => Promise<void> | void;
+  onSubmit: (args: {
+    username: string;
+    password: string;
+    email: string;
+  }) => Promise<void> | void;
   submitLabel?: string;
 }
 
@@ -34,9 +38,13 @@ export function SignupCard({
       <form onSubmit={handleSubmit} className={styles.card}>
         <h1 className={styles.title}>{title}</h1>
         {subtitle && <p className={styles.subtitle}>{subtitle}</p>}
-        {errorMessage ? <div className={styles.error}>{errorMessage}</div> : null}
+        {errorMessage ? (
+          <div className={styles.error}>{errorMessage}</div>
+        ) : null}
 
-        <label htmlFor="email" className={styles.label}>Email</label>
+        <label htmlFor="email" className={styles.label}>
+          Email
+        </label>
         <input
           id="email"
           name="email"
@@ -49,7 +57,9 @@ export function SignupCard({
           autoComplete="email"
         />
 
-        <label htmlFor="username" className={styles.label}>Username</label>
+        <label htmlFor="username" className={styles.label}>
+          Username
+        </label>
         <input
           id="username"
           name="username"
@@ -62,7 +72,9 @@ export function SignupCard({
           autoComplete="username"
         />
 
-        <label htmlFor="password" className={styles.label}>Password</label>
+        <label htmlFor="password" className={styles.label}>
+          Password
+        </label>
         <input
           id="password"
           name="password"
@@ -75,7 +87,12 @@ export function SignupCard({
           autoComplete="new-password"
         />
 
-        <button type="submit" disabled={submitting} className={styles.button} data-submitting={submitting}>
+        <button
+          type="submit"
+          disabled={submitting}
+          className={styles.button}
+          data-submitting={submitting}
+        >
           {submitting ? "Creating…" : submitLabel}
         </button>
       </form>
@@ -84,5 +101,3 @@ export function SignupCard({
 }
 
 export default SignupCard;
-
-

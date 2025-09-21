@@ -4,31 +4,31 @@ import { getServerSession } from "next-auth";
 import prisma from "@repo/db/prisma";
 
 export async function GET() {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-        return NextResponse.json({ error: "Unauthorized "}, { status: 401 });
-    }
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized " }, { status: 401 });
+  }
 
-    const res = await prisma.galaxy.findMany({
-        where: { userId: session.user.id },
+  const res = await prisma.galaxy.findMany({
+    where: { userId: session.user.id },
+    select: {
+      id: true,
+      name: true,
+      planets: {
         select: {
           id: true,
-          name: true,
-          planets: {
-            select: {
-              id: true,
-              content: true,
-              createdAt: true
-            },
-            orderBy: { createdAt: 'desc' }
-          },
-          _count: { select: { planets: true } }
-        }
-      });
+          content: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: "desc" },
+      },
+      _count: { select: { planets: true } },
+    },
+  });
 
-    if (!res) {
-        return NextResponse.json({ msg: "Emptyyy"}, {status: 400 });
-    }
+  if (!res) {
+    return NextResponse.json({ msg: "Emptyyy" }, { status: 400 });
+  }
 
-    return NextResponse.json(res);
+  return NextResponse.json(res);
 }
