@@ -1,135 +1,151 @@
-# Turborepo starter
+## Pocket Universe (pck-unv)
 
-This Turborepo starter is maintained by the Turborepo core team.
+Monorepo for a Next.js app with authentication and a Prisma-backed database. Built with Turborepo and pnpm.
 
-## Using this example
+### Structure
+- `apps/web`: Next.js app (primary app)
+- `apps/docs`: Next.js docs app (optional)
+- `packages/ui`: shared UI components
+- `packages/db`: Prisma schema and client
+- `packages/eslint-config`, `packages/typescript-config`: shared config
 
-Run the following command:
+### Prerequisites
+- Node.js >= 18
+- pnpm 9
+- A PostgreSQL database URL for local and/or production
 
-```sh
-npx create-turbo@latest
+### Setup
+```bash
+pnpm install
 ```
 
-## What's inside?
-
-This Turborepo includes the following packages/apps:
-
-### Apps and Packages
-
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
-
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
-
-### Utilities
-
-This Turborepo has some additional tools already setup for you:
-
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
-
-### Build
-
-To build all apps and packages, run the following command:
-
+Create environment files:
+- `apps/web/.env.local` (development)
 ```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build
-yarn dlx turbo build
-pnpm exec turbo build
+DATABASE_URL=postgres://USER:PASSWORD@HOST:PORT/DB
+NEXTAUTH_SECRET=your_dev_secret
+NEXTAUTH_URL=http://localhost:3000
 ```
 
-You can build a specific package by using a [filter](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters):
-
+### Development
+```bash
+pnpm dev
 ```
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build --filter=docs
+Open http://localhost:3000.
 
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build --filter=docs
-yarn exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
+### Formatting and Linting
+- Format all files:
+```bash
+pnpm run format
 ```
-
-### Develop
-
-To develop all apps and packages, run the following command:
-
+- Check formatting:
+```bash
+pnpm run prettier-check
 ```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev
-yarn exec turbo dev
-pnpm exec turbo dev
+- Lint:
+```bash
+pnpm run lint
 ```
 
-You can develop a specific package by using a [filter](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters):
+### Database (Prisma)
+The Prisma schema lives in `packages/db/prisma/schema.prisma`.
 
-```
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev --filter=web
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev --filter=web
-yarn exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
+- Create/migrate (development):
+```bash
+cd packages/db
+export DATABASE_URL="postgres://USER:PASSWORD@HOST:PORT/DB"
+pnpm dlx prisma migrate dev
 ```
 
-### Remote Caching
-
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
-
-Turborepo can use a technique known as [Remote Caching](https://turborepo.com/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo login
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo login
-yarn exec turbo login
-pnpm exec turbo login
+- Apply migrations (production):
+```bash
+cd packages/db
+export DATABASE_URL="postgres://USER:PASSWORD@HOST:PORT/DB"
+pnpm dlx prisma migrate deploy
 ```
 
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
+> Note: Avoid `prisma migrate reset` in production; it drops data.
 
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
+### Authentication
+The app uses `next-auth` with a Credentials provider. Required envs:
+- `NEXTAUTH_SECRET`: random secret string
+- `NEXTAUTH_URL`: base URL of the deployment (e.g., Cloud Run URL)
+- `DATABASE_URL`: backing Postgres for user storage
 
+### Deploying to Google Cloud Run
+
+You can deploy via source builds (Buildpacks) or with a container image.
+
+#### Option A: Source deploy (recommended for this monorepo)
+Deploy only the web app directory so the correct `start` script is used.
+```bash
+export PROJECT_ID="your-gcp-project"
+export REGION="asia-south1"
+gcloud config set project $PROJECT_ID
+gcloud config set run/region $REGION
+
+gcloud run deploy pocket-universe \
+  --source apps/web \
+  --region $REGION \
+  --allow-unauthenticated \
+  --set-env-vars NODE_ENV=production,NEXTAUTH_URL=https://YOUR_SERVICE_URL \
+  --set-secrets DATABASE_URL=DATABASE_URL:latest,NEXTAUTH_SECRET=NEXTAUTH_SECRET:latest
 ```
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo link
 
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo link
-yarn exec turbo link
-pnpm exec turbo link
+#### Option B: Container image deploy
+Build an image and deploy it. This avoids monorepo detection issues.
+```bash
+export PROJECT_ID="your-gcp-project"
+export REGION="asia-south1"
+export REPO="web" # Artifact Registry repo
+gcloud artifacts repositories create $REPO \
+  --repository-format=docker \
+  --location=$REGION \
+  --description="Docker images for pck-unv" || true
+
+export IMAGE="$REGION-docker.pkg.dev/$PROJECT_ID/$REPO/pck-unv-web:$(git rev-parse --short HEAD)"
+gcloud builds submit --tag "$IMAGE" .
+
+gcloud run deploy pocket-universe \
+  --image "$IMAGE" \
+  --region $REGION \
+  --allow-unauthenticated \
+  --set-env-vars NODE_ENV=production,NEXTAUTH_URL=https://YOUR_SERVICE_URL \
+  --set-secrets DATABASE_URL=DATABASE_URL:latest,NEXTAUTH_SECRET=NEXTAUTH_SECRET:latest
 ```
 
-## Useful Links
+#### Cloud Run troubleshooting
+- Error: container did not listen on `$PORT` (e.g., 8080)
+  - Fix 1: Use `--source apps/web` so Cloud Run uses the app’s `start` script
+  - Fix 2: Add a root script that forwards to the web app (if you deploy from repo root):
+    - In root `package.json` add: `"start": "pnpm -C apps/web start -p $PORT"`
+  - Ensure the app uses `next start -p $PORT` (Next.js default honors `PORT`)
 
-Learn more about the power of Turborepo:
+#### Verify
+```bash
+gcloud run services describe pocket-universe --format='value(status.url)'
+gcloud logs tail --region $REGION --service pocket-universe
+```
 
-- [Tasks](https://turborepo.com/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.com/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.com/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.com/docs/reference/configuration)
-- [CLI Usage](https://turborepo.com/docs/reference/command-line-reference)
+#### Apply database migrations (production)
+Run once per deploy if you have new migrations:
+```bash
+cd packages/db
+export DATABASE_URL="postgres://USER:PASSWORD@HOST:PORT/DB"
+pnpm dlx prisma migrate deploy
+```
+
+### Scripts
+Root (repo):
+- `dev`: run all apps in dev via Turbo
+- `build`: build all packages/apps
+- `lint`: run ESLint across the monorepo
+- `format` / `prettier-check`: Prettier write/check
+- `check-types`: TypeScript type checks
+
+Web app (`apps/web`):
+- `dev`, `build`, `start`, `lint`, `check-types`
+
+### Notes
+- `Procfile` is for Heroku-style platforms and not used by GCP.
+- CI: `.github/workflows/prettier.yaml` runs Prettier checks on PRs.
