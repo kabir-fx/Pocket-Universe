@@ -132,12 +132,14 @@
   background: rgba(255, 255, 255, 0.96);
   border: 1px solid rgba(0, 0, 0, 0.08);
   color: #0a0a0a;
+  position: relative;
+  z-index: 61;
 }
 .menu > summary::-webkit-details-marker { display: none; }
 
 .dropdown {
   position: absolute;
-  top: 44px;
+  top: calc(100% + 8px);
   right: 0;
   min-width: 160px;
   padding: 8px;

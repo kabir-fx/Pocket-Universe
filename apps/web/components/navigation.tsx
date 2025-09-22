@@ -22,7 +22,7 @@ export function Navigation() {
         <div className={styles.bar}>
           <div className={styles.left}>
             <Link href="/" className={styles.brand}>
-              Universe
+              Pocket Universe
             </Link>
           </div>
           <div className={styles.right}>

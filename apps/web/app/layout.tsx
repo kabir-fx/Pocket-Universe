@@ -13,7 +13,7 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Universe - Organize Your Thoughts",
+  title: "Pocket Universe - Organize Your Thoughts",
   description:
     "Create galaxies and planets to organize your thoughts and ideas",
 };
