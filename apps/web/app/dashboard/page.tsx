@@ -100,7 +100,6 @@ function Dashboard() {
       {galaxies.map((galaxy) => (
         <GalaxyFolder
           key={galaxy.id}
-          id={galaxy.id}
           name={galaxy.name}
           planets={galaxy.planets}
           planetCount={galaxy._count.planets}

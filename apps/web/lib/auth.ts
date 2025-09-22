@@ -38,7 +38,7 @@ export const authOptions = {
           placeholder: "Enter Password",
         },
       },
-      async authorize(credentials, req) {
+      async authorize(credentials) {
         if (!credentials?.username || !credentials.password) return null;
 
         const userExists = await prisma.user.findFirst({

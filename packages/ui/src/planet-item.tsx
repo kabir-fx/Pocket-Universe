@@ -6,12 +6,11 @@ import { useState } from "react";
 import styles from "./dashboard.module.css";
 
 interface PlanetItemProps {
-  id: string;
   content: string;
   createdAt: Date;
 }
 
-export function PlanetItem({ id, content, createdAt }: PlanetItemProps) {
+export function PlanetItem({ content, createdAt }: PlanetItemProps) {
   const [copied, setCopied] = useState(false);
 
   async function handleCopy() {

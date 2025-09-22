@@ -16,14 +16,12 @@ interface Planet {
 }
 
 interface GalaxyFolderProps {
-  id: string;
   name: string;
   planets: Planet[];
   planetCount: number;
 }
 
 export function GalaxyFolder({
-  id,
   name,
   planets,
   planetCount,
@@ -54,7 +52,6 @@ export function GalaxyFolder({
               {planets.map((planet) => (
                 <PlanetItem
                   key={planet.id}
-                  id={planet.id}
                   content={planet.content}
                   createdAt={planet.createdAt}
                 />
