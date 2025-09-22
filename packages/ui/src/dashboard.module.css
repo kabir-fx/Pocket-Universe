@@ -2,7 +2,7 @@
   min-height: 100vh;
   /* Vibrant cyan → blue → violet gradient to match site brightness */
   background: linear-gradient(135deg, #06b6d4 0%, #3b82f6 50%, #a855f7 100%);
-  padding: 56px 16px;
+  padding: 96px 16px 56px 16px;
   position: relative;
 }
 
@@ -19,12 +19,14 @@
 .container {
   max-width: 72rem;
   margin: 0 auto;
+  padding: 0 16px;
 }
 
 .title {
   font-size: 36px;
   font-weight: 800;
   color: #ffffff;
+  margin-top: 8px;
 }
 
 .subtitle {
@@ -85,6 +87,23 @@
 .spinner { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.6); border-top-color: #fff; border-radius: 999px; animation: spin .6s linear infinite; }
 .loadingText { margin-left: 8px; color: rgba(255, 255, 255, 0.95); font-size: 14px; }
 
+/* Notice (empty/error) */
+.notice {
+  margin-top: 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.96);
+  color: #0f172a;
+  border: 1px solid rgba(15,23,42,0.12);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.12);
+}
+
+.noticeIcon { width: 18px; height: 18px; opacity: 0.9; }
+.noticeText { font-size: 14px; }
+
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* Dark */
@@ -100,6 +119,8 @@
   .planetTime { color: #94a3b8; }
   .copyBtn:hover { background: rgba(255, 255, 255, 0.06); color: #e2e8f0; }
   .copyOk { color: #34d399; }
+
+  .notice { background: rgba(15, 23, 42, 0.9); color: #e2e8f0; border-color: rgba(255,255,255,0.16); }
 }
 
 

@@ -2,18 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  HomeIcon,
-  FolderIcon,
-  SparklesIcon,
-  ArrowRightOnRectangleIcon,
-  UserIcon,
-} from "@heroicons/react/24/outline";
+import { FolderIcon, SparklesIcon, UserIcon } from "@heroicons/react/24/outline";
 import { useSession, signOut } from "next-auth/react";
 import styles from "./navigation.module.css";
 
 const navigation = [
-  { name: "Home", href: "/", icon: HomeIcon },
+  // Home removed; brand link already routes to "/"
   { name: "Dashboard", href: "/dashboard", icon: FolderIcon },
   { name: "Playground", href: "/playground", icon: SparklesIcon },
 ];
@@ -30,6 +24,8 @@ export function Navigation() {
             <Link href="/" className={styles.brand}>
               Universe
             </Link>
+          </div>
+          <div className={styles.right}>
             <div className={styles.links}>
               {navigation.map((item) => {
                 const isActive = pathname === item.href;
@@ -46,21 +42,22 @@ export function Navigation() {
                 );
               })}
             </div>
-          </div>
-          <div className={styles.right}>
             {session ? (
               <>
-                <div className={styles.user}>
-                  <UserIcon className={styles.icon} />
-                  <span>{session.user?.name}</span>
-                </div>
-                <button
-                  onClick={() => signOut({ callbackUrl: "/" })}
-                  className={styles.signout}
-                >
-                  <ArrowRightOnRectangleIcon className={styles.icon} />
-                  Sign out
-                </button>
+                <details className={styles.menu}>
+                  <summary className={styles.user}>
+                    <UserIcon className={styles.icon} />
+                    <span>{session.user?.name}</span>
+                  </summary>
+                  <div className={styles.dropdown}>
+                    <button
+                      onClick={() => signOut({ callbackUrl: "/" })}
+                      className={styles.dropdownItem}
+                    >
+                      Sign out
+                    </button>
+                  </div>
+                </details>
               </>
             ) : (
               <>
