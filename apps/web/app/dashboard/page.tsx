@@ -72,7 +72,12 @@ function Dashboard() {
         <div style={{ display: "flex", justifyContent: "center" }}>
           <div className={styles.notice}>
             <span className={styles.noticeText}>{error}</span>
-            <a href="/auth/signin" style={{ marginLeft: 10, textDecoration: "underline" }}>Sign in</a>
+            <a
+              href="/auth/signin"
+              style={{ marginLeft: 10, textDecoration: "underline" }}
+            >
+              Sign in
+            </a>
           </div>
         </div>
       </DashboardLayout>
@@ -84,8 +89,15 @@ function Dashboard() {
       <DashboardLayout title="Dashboard" subtitle="Your galaxies and planets">
         <div style={{ display: "flex", justifyContent: "center" }}>
           <div className={styles.notice}>
-            <span className={styles.noticeText}>No galaxies yet. Try the Playground to create your first.</span>
-            <a href="/playground" style={{ marginLeft: 10, textDecoration: "underline" }}>Open Playground</a>
+            <span className={styles.noticeText}>
+              No galaxies yet. Try the Playground to create your first.
+            </span>
+            <a
+              href="/playground"
+              style={{ marginLeft: 10, textDecoration: "underline" }}
+            >
+              Open Playground
+            </a>
           </div>
         </div>
       </DashboardLayout>

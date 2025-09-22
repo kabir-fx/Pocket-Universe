@@ -16,6 +16,9 @@ export const metadata: Metadata = {
   title: "Pocket Universe - Organize Your Thoughts",
   description:
     "Create galaxies and planets to organize your thoughts and ideas",
+  icons: {
+    icon: "/app_icon.png",
+  },
 };
 
 export default function RootLayout({

@@ -2,7 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FolderIcon, SparklesIcon, UserIcon } from "@heroicons/react/24/outline";
+import {
+  FolderIcon,
+  SparklesIcon,
+  UserIcon,
+} from "@heroicons/react/24/outline";
 import { useSession, signOut } from "next-auth/react";
 import styles from "./navigation.module.css";
 
