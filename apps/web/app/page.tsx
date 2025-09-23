@@ -19,7 +19,9 @@ export default function Home() {
           <div className={styles.grid}>
             <div className={styles.leftCol}>
               <h1 className={styles.headline}>
-                Say it once, watch AI agents do it <em>forever</em>
+                Save it once, find
+                <br />
+                it <em>always</em>
               </h1>
               <div className={styles.usedBy}>
                 <span>Made with the following Tech Stack</span>
@@ -35,7 +37,7 @@ export default function Home() {
             </div>
             <div className={styles.rightCol}>
               <p className={styles.supporting}>
-                Automate notes, planning, support, and repetitive tasks without writing a line of code.
+                Keep everything you save - connected, organized, and easy to access notes.
               </p>
               <form className={styles.emailForm} action="/auth/signup" method="get">
                 <input className={styles.emailInput} name="email" placeholder="Enter your email" aria-label="Email" />
