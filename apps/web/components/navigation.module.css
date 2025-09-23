@@ -30,7 +30,7 @@
   backdrop-filter: saturate(180%) blur(8px);
   /* Navbar length */
   width: min(800px, calc(100% - 32px));
-  margin-top: 12px;
+  margin-top: 30px;
 }
 
 .left {

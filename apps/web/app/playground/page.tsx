@@ -1,16 +1,29 @@
 "use client";
 
 import { PlgCard } from "@repo/ui/plg-card";
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 function Homeer() {
   const [submitting, setSubmitting] = useState(false);
+  const [galaxies, setGalaxies] = useState<{ id: string; name: string }[]>([]);
   const searchParams = useSearchParams();
   const errorParam = searchParams.get("error");
 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  useEffect(() => {
+    // fetch recent galaxies for sidebar
+    fetch("/api/dashboard/fetchPlanets", { method: "GET", headers: { "Content-Type": "application/json" }, cache: "no-store" })
+      .then((r) => r.json().catch(() => []))
+      .then((data) => {
+        if (Array.isArray(data)) {
+          const mapped = data.map((g: any) => ({ id: g.id, name: g.name }));
+          setGalaxies(mapped);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   async function handleSubmit({
     galaxy,
@@ -87,6 +100,7 @@ function Homeer() {
       submitting={submitting}
       errorMsg={errorMsg ?? (errorParam ? "Invalid input" : null)}
       successMsg={successMsg}
+      galaxies={galaxies}
       onSubmit={handleSubmit}
     />
   );

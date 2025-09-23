@@ -3,52 +3,170 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  /* Slightly darker white background like Cal.com landing */
+  background: #f7f7f8;
   padding: 96px 24px 24px 24px;
+  position: relative;
+  overflow: hidden;
 }
 
-.card {
-  width: 100%;
-  max-width: 720px;
-  background: white;
-  border-radius: 16px;
-  padding: 32px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+/* subtle dotted grid background inspired by Cal.com */
+.container::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: linear-gradient(to right, rgba(0,0,0,0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0,0,0,0.05) 1px, transparent 1px);
+  background-size: 40px 40px;
+  mask-image: radial-gradient(ellipse at center, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 70%);
+  -webkit-mask-image: radial-gradient(ellipse at center, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 70%);
 }
+
+.cardWide {
+  width: 100%;
+  max-width: 1100px;
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 20px;
+  /* Subtle elevation and soft border similar to Cal.com cards */
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 12px 24px rgba(16, 24, 40, 0.08);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  position: relative;
+}
+
+/* Remove top plus signs - they are no longer needed */
+
+/* additional plus signs for bottom corners */
+.plusBL, .plusBR {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  pointer-events: none;
+  background: linear-gradient(to right, #d1d5db 6px, transparent 6px, transparent 8px, #d1d5db 8px),
+              linear-gradient(to bottom, #d1d5db 6px, transparent 6px, transparent 8px, #d1d5db 8px);
+  background-size: 14px 2px, 2px 14px;
+  background-position: 0 6px, 6px 0;
+  background-repeat: no-repeat;
+}
+.plusBL { bottom: -35px; left: -35px; }
+.plusBR { bottom: -35px; right: -35px; }
+
+/* edge lines around the card */
+.lineBottom, .lineLeft, .lineRight {
+  position: absolute;
+  opacity: 0.6;
+  pointer-events: none;
+}
+.lineBottom { display: none; }
+
+/* Split bottom line into segments with gaps around plus signs */
+.lineBottomLeft, .lineBottomCenter, .lineBottomRight {
+  position: absolute;
+  height: 1px;
+  bottom: -28px;
+  background: rgba(0,0,0,0.15);
+  opacity: 0.6;
+  pointer-events: none;
+}
+.lineBottomLeft { left: -100vw; right: calc(100% + 50px); }
+.lineBottomCenter { left: 0px; right: 0px; }
+.lineBottomRight { left: calc(100% + 50px); right: -100vw; }
+/* Split vertical lines into segments with gaps around plus signs */
+.lineLeftTop, .lineLeftBottom {
+  position: absolute;
+  width: 1px;
+  left: -28px;
+  background: rgba(0,0,0,0.15);
+  opacity: 0.6;
+  pointer-events: none;
+}
+.lineLeftTop { top: -100vh; bottom: 0px; }
+.lineLeftBottom { top: calc(100% + 50px); bottom: -100vh; }
+
+.lineRightTop, .lineRightBottom {
+  position: absolute;
+  width: 1px;
+  right: -28px;
+  background: rgba(0,0,0,0.15);
+  opacity: 0.6;
+  pointer-events: none;
+}
+.lineRightTop { top: -100vh; bottom: 0px; }
+.lineRightBottom { top: calc(100% + 50px); bottom: -100vh; }
+
+/* Keep original classes for backwards compatibility but hide them */
+.lineLeft, .lineRight { display: none; }
+
+.headerRow { display: flex; align-items: end; justify-content: space-between; gap: 16px; padding: 8px 12px 0 12px; }
 
 .title {
   margin: 0 0 8px 0;
   font-size: 28px;
   font-weight: 700;
-  color: #1a1a1a;
-  text-align: center;
+  color: #111827;
+  text-align: left;
 }
+
+/* Increase specificity to ensure title color provides good contrast */
+.cardWide .title { color: #111827; }
 
 .subtitle {
   margin: 0 0 32px 0;
   font-size: 16px;
-  color: #6b7280;
-  text-align: center;
+  color: #475569;
+  text-align: left;
 }
 
-.formGrid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 24px;
-  margin-top: 24px;
-}
+.twoCol { display: grid; grid-template-columns: 290px 1fr; gap: 20px; padding: 12px; }
 
 @media (max-width: 640px) {
   .formGrid {
     grid-template-columns: 1fr;
     gap: 20px;
   }
+  
+  /* Hide decorative elements on small screens */
+  .plusBL, .plusBR, 
+  .lineBottomLeft, .lineBottomCenter, .lineBottomRight,
+  .lineLeftTop, .lineLeftBottom, .lineRightTop, .lineRightBottom {
+    display: none;
+  }
+  
+  /* Reduce grid pattern intensity on mobile */
+  .container::before {
+    opacity: 0.3;
+  }
 }
 
-.section {
-  margin-bottom: 0;
+.sidebar { display: flex; flex-direction: column; gap: 12px; border-right: 1px solid #e5e7eb; padding-right: 12px; }
+.sidebarHeader { display: flex; align-items: center; gap: 8px; font-weight: 600; color: #111827; }
+.sidebarIcon { width: 16px; height: 16px; }
+.galaxyList { display: flex; flex-direction: column; gap: 10px; max-height: 340px; overflow: auto; padding-right: 6px; }
+.galaxyItem { text-align: left; padding: 10px 12px; border-radius: 10px; border: 1px solid #e5e7eb; background: #f9fafb; color: #111827; cursor: pointer; }
+.galaxyItem:hover { background: #f3f4f6; }
+.galaxyItemActive { border-color: #0ea5e9; box-shadow: 0 0 0 3px rgba(14,165,233,0.18); }
+.empty { color: #6b7280; font-size: 14px; }
+.sidebarFooter { margin-top: auto; }
+.addGalaxyBtn { width: 100%; border: 1px dashed #e5e7eb; border-radius: 10px; padding: 10px 12px; background: #f9fafb; color: #111827; cursor: pointer; }
+.galaxyInput { width: 100%; padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 10px; background: #ffffff; color: #111827; }
+
+.pasteArea { display: flex; flex-direction: column; gap: 10px; }
+.pasteLabel { color: #111827; font-weight: 600; }
+.cardWide .pasteInput, .pasteInput { 
+  width: 100%; 
+  min-height: 340px; 
+  padding: 12px 14px; 
+  border-radius: 12px; 
+  border: 1px solid #e5e7eb;
+  background: #f7f7f8;
+  color: #111827;
+  resize: vertical; 
 }
+.pasteInput::placeholder { color: #9ca3af; }
+.pasteActions { display: flex; justify-content: flex-end; }
 
 .sectionTitle {
   font-size: 16px;
@@ -85,34 +203,15 @@
   transition: border-color 0.2s ease;
 }
 
-.input:focus {
-  border-color: #f5576c;
-  box-shadow: 0 0 0 3px rgba(245, 87, 108, 0.1);
-}
+.input:focus { border-color: #aab1c5; box-shadow: 0 0 0 3px rgba(170, 177, 197, 0.12); }
 
 .input::placeholder {
   color: #9ca3af;
 }
 
-.button {
-  width: 100%;
-  padding: 12px 16px;
-  border-radius: 8px;
-  border: none;
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-  color: #ffffff;
-  cursor: pointer;
-  font-weight: 600;
-  font-size: 16px;
-  margin-top: 8px;
-  transition: all 0.2s ease;
-  box-shadow: 0 4px 12px rgba(245, 87, 108, 0.4);
-}
+.button { width: 100%; padding: 12px 16px; border-radius: 9999px; border: 1px solid rgba(0,0,0,0.16); background: #111111; color: #ffffff; cursor: pointer; font-weight: 600; font-size: 16px; margin-top: 8px; transition: all 0.2s ease; box-shadow: 0 10px 25px rgba(0,0,0,0.18); }
 
-.button:hover:not([data-submitting="true"]) {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(245, 87, 108, 0.5);
-}
+.button:hover:not([data-submitting="true"]) { background: #000000; transform: translateY(-1px); box-shadow: 0 12px 28px rgba(0,0,0,0.22); }
 
 .button[data-submitting="true"] {
   background: #9ca3af;
@@ -152,10 +251,6 @@
 
 /* Dark mode support */
 @media (prefers-color-scheme: dark) {
-  .card {
-    background: #1f2937;
-    border: 1px solid #374151;
-  }
 
   .title {
     color: #f9fafb;
@@ -179,10 +274,7 @@
     color: #f9fafb;
   }
 
-  .input:focus {
-    border-color: #f5576c;
-    box-shadow: 0 0 0 3px rgba(245, 87, 108, 0.1);
-  }
+  .input:focus { border-color: #aab1c5; box-shadow: 0 0 0 3px rgba(170, 177, 197, 0.12); }
 
   .input::placeholder {
     color: #6b7280;
@@ -202,5 +294,13 @@
 
   .optional {
     color: #6b7280;
+  }
+
+  /* Keep light theme styles for consistency */
+  .pasteLabel { color: #111827; }
+  .pasteInput { 
+    border: 1px solid #e5e7eb;
+    background: #f7f7f8;
+    color: #111827;
   }
 }
