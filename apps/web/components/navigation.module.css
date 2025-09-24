@@ -30,7 +30,7 @@
   backdrop-filter: saturate(180%) blur(8px);
   /* Navbar length */
   width: min(800px, calc(100% - 32px));
-  margin-top: 30px;
+  margin-top: 22px;
 }
 
 .left {
@@ -217,6 +217,15 @@
   .brand {
     font-size: 16px;
   }
+}
+
+/* Short viewport optimizations (e.g., 1366x768) */
+@media (max-height: 820px) {
+  .bar { margin-top: 16px; }
+}
+
+@media (max-height: 780px) and (min-width: 1200px) {
+  .bar { margin-top: 12px; }
 }
 
 /* Dark */

@@ -1,4 +1,4 @@
-.page { background: #f3f4f6; color: #111827; height: 100vh; overflow: hidden; position: relative; z-index: 0; }
+.page { background: #f3f4f6; color: #111827; min-height: 100vh; min-height: 100dvh; overflow-x: hidden; overflow-y: auto; position: relative; z-index: 0; }
 .page :where(img) { color: transparent; }
 /* New landing */
 .bannerWrap { padding-top: 140px; }
@@ -8,7 +8,7 @@
 
 .landing { padding: 40px 0 clamp(80px, 10vh, 140px); background: transparent; }
 /* Add safe-area bottom padding when available (iOS, notches) */
-.landing { padding-bottom: calc(clamp(80px, 10vh, 140px) + env(safe-area-inset-bottom)); }
+.landing { padding-bottom: calc(clamp(64px, 9dvh, 120px) + env(safe-area-inset-bottom)); }
 .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: start; }
 .leftCol { padding-top: 12px; }
 .headline { font-size: 40px; line-height: 1.1; font-weight: 800; color: #111827; }
@@ -164,7 +164,7 @@
 
 /* Mobile phones (portrait) */
 @media (max-width: 600px) {
-  .page { height: 100vh; overflow: hidden; }
+  .page { min-height: 100vh; min-height: 100dvh; overflow-x: hidden; overflow-y: auto; }
   .bannerWrap { padding-top: 120px; }
   .banner { aspect-ratio: 4 / 3; margin: 0; border-radius: 12px; }
   .containerWide { padding: 0 16px; max-width: 100%; }
@@ -206,12 +206,24 @@
 
 /* Accommodate short viewports so everything fits above the fold */
 @media (max-height: 820px) {
-  .bannerWrap { padding-top: 125px; }
-  .banner { aspect-ratio: 21 / 8; }
+  .bannerWrap { padding-top: 150px; }
+  .banner { aspect-ratio: 21 / 7; }
   .bannerImg { object-position: center 88%; }
-  .headline { font-size: 36px; }
-  .landing { padding-top: 20px; padding-bottom: calc(clamp(60px, 8vh, 100px) + env(safe-area-inset-bottom)); }
-  .glowFooter { height: 100px; }
+  .headline { font-size: 34px; }
+  .landing { padding-top: 12px; padding-bottom: calc(40px + env(safe-area-inset-bottom)); }
+  .containerWide { max-width: 1064px; }
+  .glowFooter { height: 90px; }
+}
+
+/* Target common 1366x768 class of devices specifically to avoid initial scroll */
+@media (max-height: 780px) and (min-width: 1200px) {
+  .bannerWrap { padding-top: 115px; }
+  .banner { aspect-ratio: 21 / 6.6; }
+  .bannerImg { object-position: center 80%; }
+  .headline { font-size: 32px; }
+  .supporting { font-size: 16px; }
+  .emailInput { min-width: 240px; }
+  .landing { padding-top: 8px; padding-bottom: 36px; }
 }
 
 /* Dark mode */
