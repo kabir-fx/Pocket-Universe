@@ -1,4 +1,5 @@
 import styles from "./home.module.css";
+import Image from "next/image";
 
 export default function Home() {
   return (
@@ -7,8 +8,15 @@ export default function Home() {
       <section className={styles.bannerWrap}>
         <div className={styles.containerWide}>
           <div className={styles.banner}>
-            {/* Use any large marketing image here; placeholder uses window.svg */}
-            <img src="/landscape.png" alt="Hero landscape" className={styles.bannerImg} />
+            {/* Use Next.js Image for responsive, non-cropping behavior */}
+            <Image
+              src="/landscape.png"
+              alt="Hero landscape"
+              className={styles.bannerImg}
+              fill
+              priority
+              sizes="(max-width: 900px) 92vw, 1120px"
+            />
           </div>
         </div>
       </section>

@@ -27,20 +27,22 @@ export function PlanetItem({ content, createdAt }: PlanetItemProps) {
     <div className={styles.planetRow}>
       <div className={styles.dot}></div>
       <div className={styles.planetContent}>{content}</div>
-      <button
-        title="Copy to clipboard"
-        aria-label="Copy planet content"
-        className={styles.copyBtn}
-        onClick={handleCopy}
-      >
-        {copied ? (
-          <CheckIcon className={`${styles.copyIcon} ${styles.copyOk}`} />
-        ) : (
-          <ClipboardIcon className={styles.copyIcon} />
-        )}
-      </button>
-      <div className={styles.planetTime}>
-        {formatDistanceToNow(new Date(createdAt), { addSuffix: true })}
+      <div className={styles.planetActions}>
+        <button
+          title="Copy to clipboard"
+          aria-label="Copy planet content"
+          className={styles.copyBtn}
+          onClick={handleCopy}
+        >
+          {copied ? (
+            <CheckIcon className={`${styles.copyIcon} ${styles.copyOk}`} />
+          ) : (
+            <ClipboardIcon className={styles.copyIcon} />
+          )}
+        </button>
+        <div className={styles.planetTime}>
+          {formatDistanceToNow(new Date(createdAt), { addSuffix: true })}
+        </div>
       </div>
     </div>
   );

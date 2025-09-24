@@ -1,11 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import {
-  ChevronDownIcon,
-  ChevronRightIcon,
-  FolderIcon,
-} from "@heroicons/react/24/outline";
+import { FolderIcon } from "@heroicons/react/24/outline";
 import { PlanetItem } from "./planet-item";
 import styles from "./dashboard.module.css";
 
@@ -26,47 +21,36 @@ export function GalaxyFolder({
   planets,
   planetCount,
 }: GalaxyFolderProps) {
-  const [isOpen, setIsOpen] = useState(false);
-
   return (
     <div className={styles.card}>
-      <button onClick={() => setIsOpen(!isOpen)} className={styles.cardHeader}>
-        {isOpen ? (
-          <ChevronDownIcon className={styles.icon} width={16} height={16} />
-        ) : (
-          <ChevronRightIcon className={styles.icon} width={16} height={16} />
-        )}
-        <FolderIcon className={styles.icon} width={18} height={18} />
-        <div>
+      <div className={styles.cardHeader}>
+        <FolderIcon className={styles.icon} width={20} height={20} />
+        <div className={styles.cardHeaderContent}>
           <div className={styles.cardTitle}>{name}</div>
           <div className={styles.cardMeta}>
             {planetCount} planet{planetCount !== 1 ? "s" : ""}
           </div>
         </div>
-      </button>
+      </div>
 
-      {isOpen && (
-        <div className={styles.divider}>
-          {planets.length > 0 ? (
-            <div>
-              {planets.map((planet) => (
-                <PlanetItem
-                  key={planet.id}
-                  content={planet.content}
-                  createdAt={planet.createdAt}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className={styles.planetRow}>
-              <div className={styles.dot}></div>
-              <div className={styles.planetContent}>
-                No planets in this galaxy yet
-              </div>
-            </div>
-          )}
-        </div>
-      )}
+      <div className={styles.cardContent}>
+        {planets.length > 0 ? (
+          <>
+            {planets.map((planet) => (
+              <PlanetItem
+                key={planet.id}
+                content={planet.content}
+                createdAt={planet.createdAt}
+              />
+            ))}
+          </>
+        ) : (
+          <div className={styles.emptyState}>
+            <div className={styles.emptyIcon}>📁</div>
+            <div className={styles.emptyText}>No planets yet</div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -11,13 +11,13 @@ interface DashboardLayoutProps {
 
 export function DashboardLayout({
   children,
-  title = "Dashboard",
+  title,
   subtitle,
 }: DashboardLayoutProps) {
   return (
     <div className={styles.wrapper}>
       <div className={styles.container}>
-        <h1 className={styles.title}>{title}</h1>
+        {title && <h1 className={styles.title}>{title}</h1>}
         {subtitle && <p className={styles.subtitle}>{subtitle}</p>}
         <div className={styles.stack}>{children}</div>
       </div>

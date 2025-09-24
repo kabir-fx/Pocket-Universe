@@ -86,7 +86,7 @@ function Dashboard() {
 
   if (galaxies.length === 0) {
     return (
-      <DashboardLayout title="Dashboard" subtitle="Your galaxies and planets">
+      <DashboardLayout>
         <div style={{ display: "flex", justifyContent: "center" }}>
           <div className={styles.notice}>
             <span className={styles.noticeText}>
@@ -105,7 +105,7 @@ function Dashboard() {
   }
 
   return (
-    <DashboardLayout title="Dashboard" subtitle="Your galaxies and planets">
+    <DashboardLayout>
       {galaxies.map((galaxy) => (
         <GalaxyFolder
           key={galaxy.id}
