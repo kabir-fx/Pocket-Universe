@@ -1,6 +1,7 @@
 "use client";
 
 import { SessionProvider } from "next-auth/react";
+import { usePathname } from "next/navigation";
 import { Navigation } from "./navigation";
 
 interface ProvidersProps {
@@ -8,9 +9,12 @@ interface ProvidersProps {
 }
 
 export function Providers({ children }: ProvidersProps) {
+  const pathname = usePathname();
+  const isAuthPage = pathname?.startsWith("/auth");
+
   return (
     <SessionProvider>
-      <Navigation />
+      {!isAuthPage && <Navigation />}
       <main>{children}</main>
     </SessionProvider>
   );

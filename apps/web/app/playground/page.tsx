@@ -14,7 +14,11 @@ function Homeer() {
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   useEffect(() => {
     // fetch recent galaxies for sidebar
-    fetch("/api/dashboard/fetchPlanets", { method: "GET", headers: { "Content-Type": "application/json" }, cache: "no-store" })
+    fetch("/api/dashboard/fetchPlanets", {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+      cache: "no-store",
+    })
       .then((r) => r.json().catch(() => []))
       .then((data) => {
         if (Array.isArray(data)) {

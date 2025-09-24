@@ -1,35 +1,93 @@
 .container {
   min-height: 100vh;
   display: flex;
+  background: white;
+}
+
+.leftSection {
+  width: 50%;
+  display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 24px;
+  padding: 48px 24px;
+  background: white;
+}
+
+.rightSection {
+  width: 50%;
+  background-image: url('/sign-in-up-img.png');
+  /* Zoom in and bias horizontal framing so the man is centered */
+  background-size: 210%;
+  background-position: 70% center;
+  background-repeat: no-repeat;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .card {
   width: 100%;
-  max-width: 420px;
-  background: white;
-  border-radius: 16px;
-  padding: 40px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  max-width: 520px;
+  background: transparent;
+  padding: 0;
+}
+
+.brand {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: lowercase;
+  color: #111827;
+  margin-bottom: 24px;
+  text-align: center;
+  /* Visually shift upward without affecting following layout */
+  position: relative;
+  top: -10px;
+}
+
+.brand a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.brand a:hover {
+  text-decoration: underline;
 }
 
 .title {
-  margin: 0 0 8px 0;
-  font-size: 28px;
+  margin: 0 0 12px 0;
+  font-size: 42px;
   font-weight: 700;
-  color: #1a1a1a;
+  color: #000000;
   text-align: center;
+  line-height: 1.1;
+  /* Visually shift upward without affecting below layout */
+  position: relative;
+  top: -12px;
 }
 
-.subtitle {
-  margin: 0 0 32px 0;
-  font-size: 16px;
+.subtitle { display: none; }
+.title em {
+  /* Match landing page: serif, italic, medium weight */
+  font-family: serif;
+  font-style: italic;
+  font-weight: 500;
+}
+.loginRow {
+  margin-top: 16px;
+  font-size: 14px;
   color: #6b7280;
-  text-align: center;
+}
+
+.loginRow a {
+  color: #0ea5e9;
+  text-decoration: none;
+  margin-left: 4px;
+}
+
+.loginRow a:hover {
+  text-decoration: underline;
 }
 
 .label {
@@ -43,8 +101,8 @@
 .input {
   width: 100%;
   padding: 12px 16px;
-  border-radius: 8px;
-  border: 2px solid #e5e7eb;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
   background: #ffffff;
   color: #1f2937;
   outline: none;
@@ -65,21 +123,21 @@
 .button {
   width: 100%;
   padding: 12px 16px;
-  border-radius: 8px;
+  border-radius: 9999px;
   border: none;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: #ffffff;
+  background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
+  color: #111827;
   cursor: pointer;
   font-weight: 600;
   font-size: 16px;
   margin-top: 8px;
   transition: all 0.2s ease;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 4px 12px rgba(251, 191, 36, 0.35);
 }
 
 .button:hover:not([data-submitting="true"]) {
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.5);
+  box-shadow: 0 6px 16px rgba(251, 191, 36, 0.45);
 }
 
 .button[data-submitting="true"] {
@@ -120,49 +178,152 @@
   text-decoration: underline;
 }
 
-/* Dark mode support */
-@media (prefers-color-scheme: dark) {
-  .card {
-    background: #1f2937;
-    border: 1px solid #374151;
-  }
+/* Force light look even when system is dark */
+.leftSection {
+  color-scheme: light;
+}
 
-  .title {
-    color: #f9fafb;
-  }
+/* Social Login Buttons */
+.socialRow {
+  display: flex;
+  gap: 16px;
+  margin-top: 16px;
+  margin-bottom: 24px;
+}
 
-  .subtitle {
-    color: #9ca3af;
-  }
+.socialButton {
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 9999px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  color: #374151;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 16px;
+  margin-bottom: 0;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
 
-  .label {
-    color: #e5e7eb;
-  }
+.socialButton:hover {
+  border-color: #d1d5db;
+  background: #f9fafb;
+}
 
-  .input {
-    background: #374151;
-    border-color: #4b5563;
-    color: #f9fafb;
-  }
+.socialButton:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
 
-  .input:focus {
-    border-color: #8b5cf6;
-    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
-  }
+.socialIcon {
+  width: 20px;
+  height: 20px;
+}
 
-  .input::placeholder {
-    color: #6b7280;
-  }
+.divider {
+  display: flex;
+  align-items: center;
+  margin: 24px 0;
+  color: #9ca3af;
+  font-size: 14px;
+}
 
-  .error {
-    background: #451a1a;
-    border-color: #7f1d1d;
-    color: #fca5a5;
-  }
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #e5e7eb;
+}
 
-  .footer {
-    color: #9ca3af;
+.divider::before {
+  margin-right: 16px;
+}
+
+.divider::after {
+  margin-left: 16px;
+}
+
+.heroOverlay {
+  position: absolute;
+  inset: 0;
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  text-align: left;
+  color: white;
+  padding: 24px 32px;
+}
+
+.heroTitle {
+  display: none;
+}
+
+.heroSubtitle {
+  font-size: 18px;
+  font-weight: 400;
+  opacity: 0.9;
+  max-width: 400px;
+}
+
+.brandLogos {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 24px;
+  margin-top: 12px;
+  opacity: 0.9;
+}
+
+.brandLogo {
+  height: 32px;
+  filter: brightness(0) invert(1);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .container {
+    flex-direction: column;
+  }
+  
+  .rightSection {
+    min-height: 200px;
+    order: -1;
+    /* Scale back zoom slightly on small screens */
+    background-size: 220%;
+    background-position: 55% center;
+  }
+  
+  .leftSection {
+    padding: 24px;
+  }
+  
+  .heroTitle {
+    font-size: 32px;
+  }
+  
+  .heroSubtitle {
+    font-size: 16px;
+  }
+  
+  .brandLogos {
+    margin-top: 24px;
   }
 }
 
+/* Large screens (Arc fullscreen etc.) - gently lift the card */
+@media (min-width: 1280px) and (min-height: 800px) {
+  .card { margin-top: -24px; }
+}
+
+@media (min-width: 1600px) and (min-height: 900px) {
+  .card { margin-top: -56px; }
+}
 

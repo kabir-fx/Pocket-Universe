@@ -51,7 +51,7 @@ export function PlgCard({
         {/* Decorative plus signs for bottom corners */}
         <div className={styles.plusBL}></div>
         <div className={styles.plusBR}></div>
-        
+
         {/* Decorative edge lines with gaps around plus signs */}
         <div className={styles.lineBottomLeft}></div>
         <div className={styles.lineBottomCenter}></div>
@@ -60,7 +60,7 @@ export function PlgCard({
         <div className={styles.lineLeftBottom}></div>
         <div className={styles.lineRightTop}></div>
         <div className={styles.lineRightBottom}></div>
-        
+
         <div className={styles.headerRow}>
           <div style={{ paddingLeft: 4 }}>
             <h1 className={styles.title}>{title}</h1>
@@ -87,7 +87,10 @@ export function PlgCard({
                     key={g.id}
                     type="button"
                     className={`${styles.galaxyItem} ${galaxy === g.name ? styles.galaxyItemActive : ""}`}
-                    onClick={() => { setGalaxy(g.name); setIsTypingGalaxy(false); }}
+                    onClick={() => {
+                      setGalaxy(g.name);
+                      setIsTypingGalaxy(false);
+                    }}
                   >
                     {g.name}
                   </button>
@@ -103,7 +106,13 @@ export function PlgCard({
                   onChange={(e) => setGalaxy(e.target.value)}
                 />
               ) : (
-                <button type="button" className={styles.addGalaxyBtn} onClick={() => setIsTypingGalaxy(true)}>+ New galaxy</button>
+                <button
+                  type="button"
+                  className={styles.addGalaxyBtn}
+                  onClick={() => setIsTypingGalaxy(true)}
+                >
+                  + New galaxy
+                </button>
               )}
             </div>
           </aside>

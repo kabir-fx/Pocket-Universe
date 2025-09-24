@@ -45,11 +45,23 @@ export default function Home() {
             </div>
             <div className={styles.rightCol}>
               <p className={styles.supporting}>
-                Keep everything you save - connected, organized, and easy to access notes.
+                Keep everything you save - connected, organized, and easy to
+                access notes.
               </p>
-              <form className={styles.emailForm} action="/auth/signup" method="get">
-                <input className={styles.emailInput} name="email" placeholder="Enter your email" aria-label="Email" />
-                <button type="submit" className={styles.ctaButton}>Try for free</button>
+              <form
+                className={styles.emailForm}
+                action="/auth/signup"
+                method="get"
+              >
+                <input
+                  className={styles.emailInput}
+                  name="email"
+                  placeholder="Enter your email"
+                  aria-label="Email"
+                />
+                <button type="submit" className={styles.ctaButton}>
+                  Try for free
+                </button>
               </form>
             </div>
           </div>
