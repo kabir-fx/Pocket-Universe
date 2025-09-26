@@ -81,8 +81,8 @@
 }
 
 .linkActive {
-  background: rgba(96, 165, 250, 0.2);
-  border-color: rgba(96, 165, 250, 0.4);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
   color: #ffffff;
 }
 
@@ -107,7 +107,7 @@
   font-weight: 500;
   transition: all 0.2s ease;
   white-space: nowrap;
-}
+}o
 
 .signin { 
   color: #e5e7eb;

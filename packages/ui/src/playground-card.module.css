@@ -37,8 +37,6 @@
   position: relative;
 }
 
-/* Remove top plus signs - they are no longer needed */
-
 /* additional plus signs for bottom corners */
 .plusBL, .plusBR {
   position: absolute;
