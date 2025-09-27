@@ -11,6 +11,7 @@ export async function GET() {
 
   const res = await prisma.galaxy.findMany({
     where: { userId: session.user.id },
+    orderBy: { createdAt: "desc" },
     select: {
       id: true,
       name: true,

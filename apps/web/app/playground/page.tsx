@@ -12,21 +12,26 @@ function Homeer() {
 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  const fetchGalaxies = async () => {
+    try {
+      const response = await fetch("/api/dashboard", {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+        cache: "no-store",
+      });
+      const data = await response.json().catch(() => []);
+      if (Array.isArray(data)) {
+        const mapped = data.map((g: any) => ({ id: g.id, name: g.name }));
+        setGalaxies(mapped);
+      }
+    } catch (error) {
+      console.error("Failed to fetch galaxies:", error);
+    }
+  };
+
   useEffect(() => {
-    // fetch recent galaxies for sidebar
-    fetch("/api/dashboard", {
-      method: "GET",
-      headers: { "Content-Type": "application/json" },
-      cache: "no-store",
-    })
-      .then((r) => r.json().catch(() => []))
-      .then((data) => {
-        if (Array.isArray(data)) {
-          const mapped = data.map((g: any) => ({ id: g.id, name: g.name }));
-          setGalaxies(mapped);
-        }
-      })
-      .catch(() => {});
+    fetchGalaxies();
   }, []);
 
   async function handleSubmit({
@@ -89,6 +94,8 @@ function Homeer() {
 
       // Success!
       setSuccessMsg("Planet created successfully!");
+      // Refresh galaxies list to show any newly created galaxy
+      await fetchGalaxies();
       if (onSuccess) {
         onSuccess();
       }
