@@ -4,7 +4,7 @@
   align-items: center;
   justify-content: center;
   /* Slightly darker white background like Cal.com landing */
-  background: #f7f7f8;
+  background: linear-gradient(135deg, #2C003E 0%, #512DA8 50%, #EE82EE 100%);
   padding: 96px 24px 24px 24px;
   position: relative;
   overflow: hidden;
@@ -108,8 +108,6 @@
   text-align: left;
 }
 
-/* Increase specificity to ensure title color provides good contrast */
-.cardWide .title { color: #111827; }
 
 .subtitle {
   margin: 0 0 32px 0;
@@ -153,7 +151,7 @@
 
 .pasteArea { display: flex; flex-direction: column; gap: 10px; }
 .pasteLabel { color: #111827; font-weight: 600; }
-.cardWide .pasteInput, .pasteInput { 
+.pasteInput { 
   width: 100%; 
   min-height: 340px; 
   padding: 12px 14px; 
@@ -251,7 +249,7 @@
 @media (prefers-color-scheme: dark) {
 
   .title {
-    color: #f9fafb;
+    color: #050505;
   }
 
   .subtitle {
@@ -272,8 +270,6 @@
     color: #f9fafb;
   }
 
-  .input:focus { border-color: #aab1c5; box-shadow: 0 0 0 3px rgba(170, 177, 197, 0.12); }
-
   .input::placeholder {
     color: #6b7280;
   }
@@ -292,13 +288,5 @@
 
   .optional {
     color: #6b7280;
-  }
-
-  /* Keep light theme styles for consistency */
-  .pasteLabel { color: #111827; }
-  .pasteInput { 
-    border: 1px solid #e5e7eb;
-    background: #f7f7f8;
-    color: #111827;
   }
 }
