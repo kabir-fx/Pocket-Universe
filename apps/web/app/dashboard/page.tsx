@@ -26,7 +26,7 @@ function Dashboard() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch("/api/dashboard/fetchPlanets", {
+        const response = await fetch("/api/dashboard", {
           method: "GET",
           headers: { "Content-Type": "application/json" },
           cache: "no-store",

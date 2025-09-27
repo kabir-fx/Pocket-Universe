@@ -86,8 +86,6 @@
   transform: translateY(-1px);
 }
 
-/* Decorative lines for cards - similar to playground */
-
 /* Decorative border frame around the dashboard */
 .container::before {
   content: "";
@@ -269,6 +267,38 @@
 .copyIcon { width: 16px; height: 16px; }
 .copyOk { color: #10b981; }
 
+/* Delete button */
+.deleteBtn {
+  border: none;
+  background: transparent;
+  color: #ef4444;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  transition: all 0.2s ease;
+}
+
+.deleteBtn:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+}
+
+.deleteBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.deleteIcon {
+  width: 16px;
+  height: 16px;
+}
+
+.deleting {
+  animation: spin 1s linear infinite;
+}
+
 /* Loading */
 .loadingWrap { display: flex; align-items: center; justify-content: center; padding: 48px 0; }
 .spinner { width: 20px; height: 20px; border: 2px solid rgba(0,0,0,0.1); border-top-color: #3b82f6; border-radius: 999px; animation: spin .8s linear infinite; }
@@ -338,6 +368,9 @@
   
   .copyBtn { color: #9ca3af; }
   .copyBtn:hover { background: rgba(255, 255, 255, 0.06); color: #e5e7eb; }
+
+  .deleteBtn { color: #f87171; }
+  .deleteBtn:hover { background: rgba(248, 113, 113, 0.1); color: #fca5a5; }
   
   .planetActions {
     background: rgba(31, 41, 55, 0.95);
