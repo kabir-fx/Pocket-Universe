@@ -4,7 +4,7 @@
   align-items: center;
   justify-content: center;
   /* Slightly darker white background like Cal.com landing */
-  background: linear-gradient(135deg, #2C003E 0%, #512DA8 50%, #EE82EE 100%);
+  background: linear-gradient(180deg, rgba(28, 28, 28, 0.96), rgba(10, 10, 10, 0.96));
   padding: 96px 24px 24px 24px;
   position: relative;
   overflow: hidden;
@@ -151,15 +151,15 @@
 
 .pasteArea { display: flex; flex-direction: column; gap: 10px; }
 .pasteLabel { color: #111827; font-weight: 600; }
-.pasteInput { 
-  width: 100%; 
-  min-height: 340px; 
-  padding: 12px 14px; 
-  border-radius: 12px; 
+.pasteInput {
+  width: 100%;
+  min-height: 340px;
+  padding: 12px 14px;
+  border-radius: 12px;
   border: 1px solid #e5e7eb;
   background: #f7f7f8;
   color: #111827;
-  resize: vertical; 
+  resize: none;
 }
 .pasteInput::placeholder { color: #9ca3af; }
 .pasteActions { display: flex; justify-content: flex-end; }
