@@ -11,6 +11,9 @@ export interface PlgCardProps {
   errorMsg?: string | null;
   successMsg?: string | null;
   galaxies?: { id: string; name: string }[];
+  backgroundColor?: string;
+  cardBackgroundColor?: string;
+  showShadows?: boolean;
   onSubmit: (args: {
     galaxy?: string;
     planet: string;
@@ -25,6 +28,9 @@ export function PlgCard({
   errorMsg,
   successMsg,
   galaxies = [],
+  backgroundColor,
+  cardBackgroundColor,
+  showShadows = true,
   onSubmit,
 }: PlgCardProps) {
   const [galaxy, setGalaxy] = useState("");
@@ -46,8 +52,18 @@ export function PlgCard({
   }
 
   return (
-    <div className={styles.container}>
-      <form onSubmit={handleSubmit} className={styles.cardWide}>
+    <div
+      className={styles.container}
+      style={backgroundColor ? { background: backgroundColor } : undefined}
+    >
+      <form
+        onSubmit={handleSubmit}
+        className={styles.cardWide}
+        style={{
+          ...(cardBackgroundColor ? { background: cardBackgroundColor } : {}),
+          ...(showShadows ? {} : { boxShadow: 'none' }),
+        }}
+      >
         {/* Decorative plus signs for bottom corners */}
         <div className={styles.plusBL}></div>
         <div className={styles.plusBR}></div>

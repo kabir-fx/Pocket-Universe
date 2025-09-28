@@ -9,7 +9,17 @@ export default function PlaygroundLayout({
 }) {
   return (
     <SessionProvider>
-      <div className="min-h-screen">{children}</div>
+      <div
+        className="min-h-screen"
+        style={{
+          backgroundImage: 'url("/image2.png")',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+        }}
+      >
+        {children}
+      </div>
     </SessionProvider>
   );
 }

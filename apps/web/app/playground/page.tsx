@@ -112,6 +112,9 @@ function Homeer() {
       errorMsg={errorMsg ?? (errorParam ? "Invalid input" : null)}
       successMsg={successMsg}
       galaxies={galaxies}
+      backgroundColor="transparent"
+      cardBackgroundColor="transparent"
+      showShadows={false}
       onSubmit={handleSubmit}
     />
   );
