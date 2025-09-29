@@ -1,5 +1,14 @@
+/* Reset and normalize styles */
+.container,
+.container *,
+.container *::before,
+.container *::after {
+  box-sizing: border-box;
+}
+
 .container {
-  min-height: 100vh;
+  /* min-height: 100vh; */
+  min-height: 100dvh; /* Dynamic viewport height for mobile browsers */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -31,7 +40,7 @@
   margin: 0 0 4px 0;
   font-size: 28px;
   font-weight: 700;
-  color: #111827;
+  color: #f7f7f8;
   text-align: left;
 }
 
@@ -45,6 +54,32 @@
 
 .topControls { display: flex; align-items: center; gap: 16px; padding: 8px; }
 
+/* Enhanced responsive design */
+@media (max-height: 800px) {
+  .container {
+    padding: 1rem;
+    align-items: flex-start;
+    padding-top: 2rem;
+    min-height: 100vh;
+  }
+  
+  .cardWide {
+    max-width: min(900px, calc(100vw - 2rem));
+    padding: 1rem;
+  }
+}
+
+@media (max-height: 700px) {
+  .container {
+    padding: 0.75rem;
+    padding-top: 5rem;
+    align-items: flex-start;
+  }
+  
+  .cardWide {
+    max-width: min(850px, calc(100vw - 1.5rem));
+  }
+}
 @media (max-width: 768px) {
   .topControls {
     flex-direction: column;
