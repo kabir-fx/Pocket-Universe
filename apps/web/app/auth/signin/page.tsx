@@ -11,16 +11,16 @@ function SignInInner() {
   const errorParam = searchParams.get("error");
 
   async function handleSubmit({
-    username,
+    email,
     password,
   }: {
-    username: string;
+    email: string;
     password: string;
   }) {
     setSubmitting(true);
     try {
       await signIn("credentials", {
-        username,
+        email,
         password,
         callbackUrl: "/playground",
         redirect: true,
@@ -39,6 +39,7 @@ function SignInInner() {
         errorParam ? "Invalid credentials. Please try again." : null
       }
       onSubmit={handleSubmit}
+      onGithubClick={() => signIn("github", { callbackUrl: "/playground" })}
     />
   );
 }

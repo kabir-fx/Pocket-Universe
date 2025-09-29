@@ -4,19 +4,19 @@ import { hash } from "bcryptjs";
 import prisma from "@repo/db/prisma";
 
 export async function POST(req: NextRequest) {
-  const { username, password, email } = await req.json();
-  if (!username || !password || !email)
+  const { name, password, email } = await req.json();
+  if (!name || !password || !email)
     return NextResponse.json({ error: "Missing cred" }, { status: 400 });
 
-  const existing = await prisma.user.findUnique({ where: { username } });
+  const existing = await prisma.user.findUnique({ where: { email } });
   if (existing)
-    return NextResponse.json({ error: "Username taken" }, { status: 409 });
+    return NextResponse.json({ error: "Email ID already exists" }, { status: 409 });
 
   const passwordHash = await hash(password, 12);
 
   const user = await prisma.user.create({
     data: {
-      username: username,
+      name: name,
       email: email,
       password: passwordHash,
     },

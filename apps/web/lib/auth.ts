@@ -1,20 +1,24 @@
 import prisma from "@repo/db/prisma";
 import { SessionStrategy } from "next-auth";
+import { PrismaAdapter } from "@auth/prisma-adapter";
+import { Adapter } from "next-auth/adapters";
 import CredentialsProvider from "next-auth/providers/credentials";
-// import GithubProvider from "next-auth/providers/github";
-// import GoogleProvider from "next-auth/providers/google";
+import GithubProvider from "next-auth/providers/github";
+import type { NextAuthOptions } from "next-auth";
 
-export const authOptions = {
+import brcypt from "bcryptjs";
+
+export const authOptions: NextAuthOptions = {
+  adapter: PrismaAdapter(prisma) as Adapter,
   pages: {
     signIn: "/auth/signin",
-    signUp: "/auth/signup",
   },
   // Configure one or more authentication providers
   providers: [
-    // GithubProvider({
-    //     clientId: process.env.GITHUB_ID || "",
-    //     clientSecret: process.env.GITHUB_SECRET || "",
-    // }),
+    GithubProvider({
+        clientId: process.env.GITHUB_ID || "",
+        clientSecret: process.env.GITHUB_SECRET || "",
+    }),
     // GoogleProvider({
     //     clientId: process.env.GOOGLE_CLIENT_ID || "",
     //     clientSecret: process.env.GOOGLE_CLIENT_SECRET || ""
@@ -27,10 +31,10 @@ export const authOptions = {
       // e.g. domain, username, password, 2FA token, etc.
       // You can pass any HTML attribute to the <input> tag through the object.
       credentials: {
-        username: {
-          label: "Username",
+        email: {
+          label: "Email",
           type: "text",
-          placeholder: "Enter Username",
+          placeholder: "Enter Email",
         },
         password: {
           label: "Password",
@@ -39,22 +43,30 @@ export const authOptions = {
         },
       },
       async authorize(credentials) {
-        if (!credentials?.username || !credentials.password) return null;
+        if (!credentials?.email || !credentials.password) return null;
 
         const userExists = await prisma.user.findFirst({
           where: {
-            username: credentials?.username,
+            email: credentials.email,
           },
         });
 
         if (userExists) {
-          // In a real app, you'd verify the password here
-          // For now, just return the user (excluding password)
+          if (!userExists?.password) {
+            console.log("Password not set for this account. Use OAuth for Login");
+            return null;
+          }
+          const decryptedPass = await brcypt.compare(credentials.password, userExists.password);
+          if (!decryptedPass) {
+            console.log("Incorrect Password");
+            return null;
+          }
+
           console.log("User found");
 
           return {
             id: userExists.id,
-            username: userExists.username,
+            name: userExists.name,
             email: userExists.email,
           };
         } else {
@@ -72,11 +84,7 @@ export const authOptions = {
 
   callbacks: {
     async jwt({ token, user }: any) {
-      if (user) {
-        token.sub = user.id;
-        // Populate the name of the token with username to pass on to display on navbar
-        token.name = user.username;
-      }
+
       return token;
     },
 
@@ -84,8 +92,6 @@ export const authOptions = {
       session.user = {
         ...session.user,
         id: token.sub as string,
-        // Bring the username [from token.name] into the session
-        name: token.name as string,
       };
 
       return session;
