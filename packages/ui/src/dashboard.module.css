@@ -1,22 +1,8 @@
 .wrapper {
   min-height: 100vh;
-  /* Light background to match playground and other endpoints */
   background: #f7f7f8;
   padding: 96px 16px 56px 16px;
   position: relative;
-}
-
-/* Subtle dotted grid background inspired by Cal.com */
-.wrapper::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background-image: linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
-  background-size: 40px 40px;
-  mask-image: radial-gradient(ellipse at center, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0) 70%);
-  -webkit-mask-image: radial-gradient(ellipse at center, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0) 70%);
 }
 
 .container {
@@ -43,6 +29,7 @@
   column-gap: 24px;
   width: 100%;
   position: relative;
+  perspective: 1200px;
 }
 
 /* Masonry-style layout using CSS columns */
@@ -70,7 +57,12 @@
   border-radius: 16px;
   background: #ffffff;
   overflow: hidden;
-  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 12px 24px rgba(16, 24, 40, 0.08);
+  box-shadow:
+    0 1px 2px rgba(16, 24, 40, 0.06),
+    0 12px 24px rgba(16, 24, 40, 0.08),
+    /* luminous haze */
+    0 0 0 1px rgba(255, 255, 255, 0.06),
+    0 0 36px 10px rgba(255, 255, 255, 0.10);
   transition: all 0.2s ease;
   height: fit-content;
   break-inside: avoid;
@@ -79,55 +71,48 @@
   display: inline-block;
   position: relative;
   z-index: 10;
+  transform-style: preserve-3d;
+  /* combine base transforms with variables for JS-driven parallax */
+  transform:
+    translateY(calc(var(--ty, 0px) + var(--hover-ty, 0px)))
+    translateZ(calc(var(--tz, 0px) + var(--hover-tz, 0px)))
+    rotateX(var(--rx, 0deg))
+    rotateY(var(--ry, 0deg));
+}
+
+/* dynamic glossy sweep highlight */
+.card::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  pointer-events: none;
+  background: linear-gradient(115deg, transparent 34%, rgba(255,255,255,0.10) 45%, rgba(255,255,255,0.28) 50%, rgba(255,255,255,0.10) 55%, transparent 66%);
+  transform: translate3d(var(--sweepX, -30%), var(--sweepY, -10%), 1px) skewX(-8deg);
+  mix-blend-mode: screen;
+  opacity: .9;
+  transition: transform .5s ease, opacity .3s ease;
+}
+
+.card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(120% 60% at 50% -10%, rgba(255,255,255,0.55), transparent 60%);
+  opacity: .30;
+  transform: translateZ(1px);
 }
 
 .card:hover {
-  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.08), 0 16px 32px rgba(16, 24, 40, 0.12);
-  transform: translateY(-1px);
+  box-shadow:
+    0 1px 2px rgba(16, 24, 40, 0.08),
+    0 16px 32px rgba(16, 24, 40, 0.12),
+    0 0 0 2px rgba(255, 255, 255, 0.08),
+    0 0 58px 16px rgba(255, 255, 255, 0.14);
+  /* add small lift via variables so JS-driven transforms compose */
+  --hover-ty: -4px;
+  --hover-tz: 8px;
 }
-
-/* Decorative border frame around the dashboard */
-.container::before {
-  content: "";
-  position: absolute;
-  top: 20px;
-  left: 12px;
-  right: 12px;
-  bottom: 12px;
-  border: 2px solid rgba(0, 0, 0, 0.12);
-  border-radius: 12px;
-  pointer-events: none;
-  z-index: 1;
-}
-
-/* Left accent line - full page height */
-.stack::after {
-  content: "";
-  position: absolute;
-  left: -58px;
-  top: -100vh;
-  bottom: -100vh;
-  width: 1px;
-  background: rgba(0, 0, 0, 0.15);
-  opacity: 0.6;
-  pointer-events: none;
-  z-index: 0;
-}
-
-/* Right accent line - full page height */
-.container::after {
-  content: "";
-  position: absolute;
-  right: -38px;
-  top: -100vh;
-  bottom: -100vh;
-  width: 1px;
-  background: rgba(0, 0, 0, 0.15);
-  opacity: 0.6;
-  pointer-events: none;
-  z-index: 0;
-}
-
 
 .cardHeader {
   display: flex;
@@ -135,10 +120,14 @@
   gap: 12px;
   padding: 20px 24px 16px 24px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  transform: translateZ(2px);
 }
 
 .cardHeaderContent {
   flex: 1;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
 }
 
 .icon {
@@ -150,7 +139,7 @@
   font-weight: 600;
   color: #111827;
   font-size: 18px;
-  margin-bottom: 4px;
+  margin-bottom: 0;
 }
 
 .cardMeta {
@@ -161,6 +150,7 @@
 .cardContent {
   padding: 0;
   background: #ffffff;
+  transform: translateZ(1px);
 }
 
 
@@ -168,6 +158,7 @@
   padding: 32px 24px;
   text-align: center;
   color: #9ca3af;
+  background: linear-gradient(180deg, rgba(28, 28, 28, 0.96), rgba(10, 10, 10, 0.96));
 }
 
 .emptyIcon {
@@ -190,6 +181,7 @@
   transition: all 0.2s ease;
   position: relative;
   background: #ffffff;
+  transform: translateZ(0.5px);
 }
 
 .planetRow:last-child {
@@ -362,10 +354,25 @@
   }
 }
 
+/* Respect reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .card::before,
+  .card::after,
+  .planetActions,
+  .planetRow,
+  .cardHeader,
+  .cardContent {
+    transition: none !important;
+    animation: none !important;
+    transform: none !important;
+  }
+}
+
 /* Dark mode support */
 @media (prefers-color-scheme: dark) {
   .wrapper {
-    background: #f7f7f8;
+    background: linear-gradient(180deg, rgba(28, 28, 28, 0.96), rgba(10, 10, 10, 0.96));
   }
 
   .wrapper::before {
@@ -384,10 +391,30 @@
   .card {
     background: #1f2937;
     border-color: rgba(255, 255, 255, 0.1);
+    /* stronger glow in dark theme */
+    box-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.35),
+      0 12px 24px rgba(0, 0, 0, 0.45),
+      0 0 0 1px rgba(255, 255, 255, 0.08),
+      0 0 40px 12px rgba(255, 255, 255, 0.12);
+    /* subtle inner gradient for depth */
+    background-image:
+      radial-gradient(120% 80% at 50% -20%, rgba(255,255,255,0.08), transparent 60%),
+      linear-gradient(180deg, rgba(255,255,255,0.04), transparent 30%);
+  }
+
+  .card::after {
+    background: radial-gradient(140% 70% at 50% -20%, rgba(255,255,255,0.65), transparent 60%);
+    opacity: .32;
   }
 
   .cardHeader {
     border-bottom-color: rgba(255, 255, 255, 0.1);
+    background:
+      linear-gradient(135deg, #1a1b1f 0%, #24262b 100%),
+      radial-gradient(120% 80% at 0% 0%, #7c3aed33 0%, transparent 60%),
+      radial-gradient(120% 80% at 100% 0%, #22d3ee33 0%, transparent 60%),
+      radial-gradient(80% 60% at 50% -10%, #ffffff15 0%, transparent 70%);
   }
 
   .cardContent {
@@ -395,7 +422,7 @@
   }
 
   .cardTitle {
-    color: #f9fafb;
+    color: #f7f7f8;
   }
 
   .cardMeta {

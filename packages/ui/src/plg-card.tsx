@@ -98,7 +98,7 @@ export function PlgCard({
               onClick={() => setShowGalaxyDropdown(!showGalaxyDropdown)}
             >
               <FolderIcon className={styles.sidebarIcon} />
-              {galaxy || "Add Galaxy"}
+              {galaxy || "Add Folder"}
               <ChevronDownIcon className={styles.dropdownIcon} />
             </button>
             {showGalaxyDropdown && (
@@ -108,7 +108,7 @@ export function PlgCard({
                     <div className={styles.headerInputWrap}>
                       <input
                         className={styles.headerInput}
-                        placeholder="New galaxy name"
+                        placeholder="New Folder name"
                         value={newGalaxyName}
                         onChange={(e) => setNewGalaxyName(e.target.value)}
                         autoFocus
@@ -174,7 +174,7 @@ export function PlgCard({
               name="planet"
               type="text"
               className={styles.planetInput}
-              placeholder="Enter your thought or idea here..."
+              placeholder="Paste your links or content here..."
               value={planet}
               onChange={(e) => setPlanet(e.target.value)}
               required
