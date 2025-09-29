@@ -2,7 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import styles from "./playground-card.module.css";
-import { FolderIcon, SparklesIcon } from "@heroicons/react/24/outline";
+import { FolderIcon, SparklesIcon, ChevronDownIcon, PlusIcon } from "@heroicons/react/24/outline";
 
 export interface PlgCardProps {
   title?: string;
@@ -36,6 +36,8 @@ export function PlgCard({
   const [galaxy, setGalaxy] = useState("");
   const [planet, setPlanet] = useState("");
   const [isTypingGalaxy, setIsTypingGalaxy] = useState(false);
+  const [showGalaxyDropdown, setShowGalaxyDropdown] = useState(false);
+  const [newGalaxyName, setNewGalaxyName] = useState("");
 
   const clearForm = () => {
     setGalaxy("");
@@ -88,75 +90,104 @@ export function PlgCard({
         {errorMsg ? <div className={styles.error}>{errorMsg}</div> : null}
         {successMsg ? <div className={styles.success}>{successMsg}</div> : null}
 
-        <div className={styles.twoCol}>
-          <aside className={styles.sidebar}>
-            <div className={styles.sidebarHeader}>
+        <div className={styles.topControls}>
+          <div className={styles.galaxyDropdown}>
+            <button
+              type="button"
+              className={styles.addGalaxyBtn}
+              onClick={() => setShowGalaxyDropdown(!showGalaxyDropdown)}
+            >
               <FolderIcon className={styles.sidebarIcon} />
-              <span>Recent Galaxies</span>
-            </div>
-            <div className={styles.galaxyList}>
-              {galaxies.length === 0 ? (
-                <div className={styles.empty}>No galaxies yet</div>
-              ) : (
-                galaxies.slice(0, 8).map((g) => (
-                  <button
-                    key={g.id}
-                    type="button"
-                    className={`${styles.galaxyItem} ${galaxy === g.name ? styles.galaxyItemActive : ""}`}
-                    onClick={() => {
-                      setGalaxy(g.name);
-                      setIsTypingGalaxy(false);
-                    }}
-                  >
-                    {g.name}
-                  </button>
-                ))
-              )}
-            </div>
-            <div className={styles.sidebarFooter}>
-              {isTypingGalaxy ? (
-                <input
-                  className={styles.galaxyInput}
-                  placeholder="New galaxy name"
-                  value={galaxy}
-                  onChange={(e) => setGalaxy(e.target.value)}
-                />
-              ) : (
-                <button
-                  type="button"
-                  className={styles.addGalaxyBtn}
-                  onClick={() => setIsTypingGalaxy(true)}
-                >
-                  + New galaxy
-                </button>
-              )}
-            </div>
-          </aside>
+              {galaxy || "Add Galaxy"}
+              <ChevronDownIcon className={styles.dropdownIcon} />
+            </button>
+            {showGalaxyDropdown && (
+              <div className={styles.dropdownMenu}>
+                <div className={styles.dropdownHeader}>
+                  {isTypingGalaxy ? (
+                    <div className={styles.headerInputWrap}>
+                      <input
+                        className={styles.headerInput}
+                        placeholder="New galaxy name"
+                        value={newGalaxyName}
+                        onChange={(e) => setNewGalaxyName(e.target.value)}
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            const committed = newGalaxyName.trim();
+                            if (committed) {
+                              setGalaxy(committed);
+                            }
+                            setShowGalaxyDropdown(false);
+                            setIsTypingGalaxy(false);
+                            setNewGalaxyName("");
+                          }
+                          if (e.key === 'Escape') {
+                            setIsTypingGalaxy(false);
+                            setNewGalaxyName("");
+                          }
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      aria-label="Create galaxy"
+                      className={styles.headerAddButton}
+                      onClick={() => {
+                        setIsTypingGalaxy(true);
+                        setNewGalaxyName("");
+                      }}
+                    >
+                      <PlusIcon className={styles.plusIcon} />
+                      <span className={styles.headerAddLabel}>Create</span>
+                    </button>
+                  )}
+                </div>
+                <div className={styles.galaxyList}>
+                  {galaxies.length === 0 ? (
+                    <div className={styles.empty}>No galaxies yet</div>
+                  ) : (
+                    galaxies.map((g) => (
+                      <button
+                        key={g.id}
+                        type="button"
+                        className={`${styles.galaxyItem} ${galaxy === g.name ? styles.galaxyItemActive : ""}`}
+                        onClick={() => {
+                          setGalaxy(g.name);
+                          setShowGalaxyDropdown(false);
+                          setIsTypingGalaxy(false);
+                        }}
+                      >
+                        {g.name}
+                      </button>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
 
-          <section className={styles.pasteArea}>
-            <label htmlFor="planet" className={styles.pasteLabel}>
-              Paste
-            </label>
-            <textarea
+          <div className={styles.inputRow}>
+            <input
               id="planet"
               name="planet"
-              className={styles.pasteInput}
-              placeholder="Paste your thought or idea here..."
+              type="text"
+              className={styles.planetInput}
+              placeholder="Enter your thought or idea here..."
               value={planet}
               onChange={(e) => setPlanet(e.target.value)}
               required
             />
-            <div className={styles.pasteActions}>
-              <button
-                type="submit"
-                disabled={submitting}
-                className={styles.button}
-                data-submitting={submitting}
-              >
-                {submitting ? "Creating…" : "Create Planet"}
-              </button>
-            </div>
-          </section>
+            <button
+              type="submit"
+              disabled={submitting}
+              className={styles.createButton}
+              data-submitting={submitting}
+            >
+              {submitting ? "Creating…" : "Create Planet"}
+            </button>
+          </div>
         </div>
       </form>
     </div>

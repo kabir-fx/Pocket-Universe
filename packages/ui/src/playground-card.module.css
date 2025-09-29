@@ -5,22 +5,9 @@
   justify-content: center;
   /* Slightly darker white background like Cal.com landing */
   background: linear-gradient(180deg, rgba(28, 28, 28, 0.96), rgba(10, 10, 10, 0.96));
-  padding: 96px 24px 24px 24px;
+  padding: 90px 24px 530px 24px;
   position: relative;
   overflow: hidden;
-}
-
-/* subtle dotted grid background inspired by Cal.com */
-.container::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background-image: linear-gradient(to right, rgba(0,0,0,0.05) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(0,0,0,0.05) 1px, transparent 1px);
-  background-size: 40px 40px;
-  mask-image: radial-gradient(ellipse at center, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 70%);
-  -webkit-mask-image: radial-gradient(ellipse at center, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 70%);
 }
 
 .cardWide {
@@ -28,7 +15,7 @@
   max-width: 1100px;
   background: #ffffff;
   border-radius: 16px;
-  padding: 20px;
+  padding: 16px;
   /* Subtle elevation and soft border similar to Cal.com cards */
   box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 12px 24px rgba(16, 24, 40, 0.08);
   border: 1px solid rgba(0, 0, 0, 0.08);
@@ -37,71 +24,11 @@
   position: relative;
 }
 
-/* additional plus signs for bottom corners */
-.plusBL, .plusBR {
-  position: absolute;
-  width: 14px;
-  height: 14px;
-  pointer-events: none;
-  background: linear-gradient(to right, #d1d5db 6px, transparent 6px, transparent 8px, #d1d5db 8px),
-              linear-gradient(to bottom, #d1d5db 6px, transparent 6px, transparent 8px, #d1d5db 8px);
-  background-size: 14px 2px, 2px 14px;
-  background-position: 0 6px, 6px 0;
-  background-repeat: no-repeat;
-}
-.plusBL { bottom: -35px; left: -35px; }
-.plusBR { bottom: -35px; right: -35px; }
 
-/* edge lines around the card */
-.lineBottom, .lineLeft, .lineRight {
-  position: absolute;
-  opacity: 0.6;
-  pointer-events: none;
-}
-.lineBottom { display: none; }
-
-/* Split bottom line into segments with gaps around plus signs */
-.lineBottomLeft, .lineBottomCenter, .lineBottomRight {
-  position: absolute;
-  height: 1px;
-  bottom: -28px;
-  background: #f7f7f8;
-  opacity: 0.6;
-  pointer-events: none;
-}
-.lineBottomLeft { left: -100vw; right: calc(100% + 50px); }
-.lineBottomCenter { left: 0px; right: 0px; }
-.lineBottomRight { left: calc(100% + 50px); right: -100vw; }
-/* Split vertical lines into segments with gaps around plus signs */
-.lineLeftTop, .lineLeftBottom {
-  position: absolute;
-  width: 1px;
-  left: -28px;
-  background: #f7f7f8;
-  opacity: 0.6;
-  pointer-events: none;
-}
-.lineLeftTop { top: -100vh; bottom: 0px; }
-.lineLeftBottom { top: calc(100% + 50px); bottom: -100vh; }
-
-.lineRightTop, .lineRightBottom {
-  position: absolute;
-  width: 1px;
-  right: -28px;
-  background: #f7f7f8;
-  opacity: 0.6;
-  pointer-events: none;
-}
-.lineRightTop { top: -100vh; bottom: 0px; }
-.lineRightBottom { top: calc(100% + 50px); bottom: -100vh; }
-
-/* Keep original classes for backwards compatibility but hide them */
-.lineLeft, .lineRight { display: none; }
-
-.headerRow { display: flex; align-items: end; justify-content: space-between; gap: 16px; padding: 8px 12px 0 12px; }
+.headerRow { display: flex; align-items: end; justify-content: space-between; gap: 16px; padding: 4px 12px 0 12px; }
 
 .title {
-  margin: 0 0 8px 0;
+  margin: 0 0 4px 0;
   font-size: 28px;
   font-weight: 700;
   color: #111827;
@@ -110,27 +37,51 @@
 
 
 .subtitle {
-  margin: 0 0 32px 0;
+  margin: 0 0 16px 0;
   font-size: 16px;
   color: #475569;
   text-align: left;
 }
 
-.twoCol { display: grid; grid-template-columns: 290px 1fr; gap: 20px; padding: 12px; }
+.topControls { display: flex; align-items: center; gap: 16px; padding: 8px; }
+
+@media (max-width: 768px) {
+  .topControls {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .inputRow {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .planetInput {
+    flex: none;
+    width: 100%;
+  }
+
+  .createButton {
+    flex: none;
+    width: 100%;
+  }
+
+  .dropdownMenu {
+    position: static;
+    margin-top: 8px;
+    max-height: 250px;
+  }
+}
 
 @media (max-width: 640px) {
-  .formGrid {
-    grid-template-columns: 1fr;
-    gap: 20px;
-  }
-  
   /* Hide decorative elements on small screens */
-  .plusBL, .plusBR, 
+  .plusBL, .plusBR,
   .lineBottomLeft, .lineBottomCenter, .lineBottomRight,
   .lineLeftTop, .lineLeftBottom, .lineRightTop, .lineRightBottom {
     display: none;
   }
-  
+
   /* Reduce grid pattern intensity on mobile */
   .container::before {
     opacity: 0.3;
@@ -140,29 +91,114 @@
 .sidebar { display: flex; flex-direction: column; gap: 12px; border-right: 1px solid #e5e7eb; padding-right: 12px; }
 .sidebarHeader { display: flex; align-items: center; gap: 8px; font-weight: 600; color: #111827; }
 .sidebarIcon { width: 16px; height: 16px; }
-.galaxyList { display: flex; flex-direction: column; gap: 10px; max-height: 340px; overflow: auto; padding-right: 6px; }
+.galaxyList { display: flex; flex-direction: column; gap: 10px; max-height: 340px; overflow: auto; padding: 8px; }
 .galaxyItem { text-align: left; padding: 10px 12px; border-radius: 10px; border: 1px solid #e5e7eb; background: #f9fafb; color: #111827; cursor: pointer; }
 .galaxyItem:hover { background: #f3f4f6; }
 .galaxyItemActive { border-color: #0ea5e9; box-shadow: 0 0 0 3px rgba(14,165,233,0.18); }
 .empty { color: #6b7280; font-size: 14px; }
 .sidebarFooter { margin-top: auto; }
-.addGalaxyBtn { width: 100%; border: 1px dashed #e5e7eb; border-radius: 10px; padding: 10px 12px; background: #f9fafb; color: #111827; cursor: pointer; }
-.galaxyInput { width: 100%; padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 10px; background: #ffffff; color: #111827; }
-
-.pasteArea { display: flex; flex-direction: column; gap: 10px; }
-.pasteLabel { color: #111827; font-weight: 600; }
-.pasteInput {
+.galaxyDropdown { position: relative; }
+.addGalaxyBtn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 12px 16px;
+  background: #f9fafb;
+  color: #111827;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+.addGalaxyBtn:hover { background: #f3f4f6; }
+.addGalaxyBtnSmall {
   width: 100%;
-  min-height: 340px;
-  padding: 12px 14px;
+  border: 1px dashed #e5e7eb;
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: #f9fafb;
+  color: #111827;
+  cursor: pointer;
+  font-size: 14px;
+}
+.dropdownIcon { width: 16px; height: 16px; }
+.dropdownMenu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 10;
+  margin-top: 4px;
+  max-height: 420px;
+  overflow: hidden;
+}
+.dropdownHeader { display: flex; justify-content: flex-start; padding: 8px; border-bottom: 1px solid #e5e7eb; background: #fff; }
+.headerAddButton { display: flex; width: 100%; align-items: center; gap: 8px; justify-content: flex-start; padding: 10px 12px; border-radius: 10px; border: 1px solid #e5e7eb; background: #f9fafb; cursor: pointer; font-size: 14px; color: #374151; font-weight: 500; min-height: 38px; }
+.headerAddButton:hover { background: #f3f4f6; }
+.headerAddLabel { line-height: 1; }
+.plusIcon { width: 16px; height: 16px; color: #374151; }
+.headerInputWrap { display: flex; align-items: center; gap: 8px; width: 100%; border: 1px solid #e5e7eb; border-radius: 10px; padding: 8px 12px; background: #f9fafb; min-height: 38px; }
+.headerInputPrefix { display: inline-flex; align-items: center; gap: 6px; color: #374151; font-size: 13px; font-weight: 500; }
+.headerInput { flex: 1; border: none; outline: none; background: transparent; color: #111827; font-size: 14px; min-width: 0; }
+.dropdownFooter { display: none; }
+.galaxyInput {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #111827;
+  font-size: 14px;
+}
+
+.inputRow {
+  display: flex;
+  gap: 12px;
+  flex: 1;
+  align-items: center;
+}
+.planetInput {
+  flex: 4;
+  padding: 12px 16px;
   border-radius: 12px;
   border: 1px solid #e5e7eb;
-  background: #d8d8d8;
+  background: #ffffff;
   color: #111827;
-  resize: none;
+  font-size: 16px;
+  outline: none;
+  transition: border-color 0.2s ease;
 }
-.pasteInput::placeholder { color: #9ca3af; }
-.pasteActions { display: flex; justify-content: flex-end; }
+.planetInput:focus { border-color: #aab1c5; box-shadow: 0 0 0 3px rgba(170, 177, 197, 0.12); }
+.planetInput::placeholder { color: #9ca3af; }
+.createButton {
+  flex: 1;
+  padding: 12px 16px;
+  border-radius: 9999px;
+  border: 1px solid rgba(0,0,0,0.16);
+  background: #111111;
+  color: #ffffff;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 16px;
+  transition: all 0.2s ease;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.18);
+}
+.createButton:hover:not([data-submitting="true"]) {
+  background: #000000;
+  transform: translateY(-1px);
+  box-shadow: 0 12px 28px rgba(0,0,0,0.22);
+}
+.createButton[data-submitting="true"] {
+  background: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
 
 .sectionTitle {
   font-size: 16px;
@@ -249,7 +285,7 @@
 @media (prefers-color-scheme: dark) {
 
   .title {
-    color: #050505;
+    color: #f7f7f8;
   }
 
   .subtitle {
