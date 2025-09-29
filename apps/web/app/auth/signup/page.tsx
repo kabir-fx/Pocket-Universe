@@ -3,6 +3,7 @@
 import SignupCard from "@repo/ui/signup-card";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { signIn } from "next-auth/react";
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -11,11 +12,11 @@ export default function SignUpPage() {
   const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit({
-    username,
+    name,
     password,
     email,
   }: {
-    username: string;
+    name: string;
     password: string;
     email: string;
   }) {
@@ -26,7 +27,7 @@ export default function SignUpPage() {
       const res = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password, email }),
+        body: JSON.stringify({ name, password, email }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
@@ -46,6 +47,8 @@ export default function SignUpPage() {
       submitting={submitting}
       errorMessage={error}
       onSubmit={handleSubmit}
+      onGithubClick={() => signIn("github", { callbackUrl: "/playground" })}
+      onGoogleClick={() => signIn("google", { callbackUrl: "/playground" })}
     />
   );
 }

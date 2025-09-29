@@ -40,6 +40,7 @@ function SignInInner() {
       }
       onSubmit={handleSubmit}
       onGithubClick={() => signIn("github", { callbackUrl: "/playground" })}
+      onGoogleClick={() => signIn("google", { callbackUrl: "/playground" })}
     />
   );
 }

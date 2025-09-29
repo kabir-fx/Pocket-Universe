@@ -14,6 +14,8 @@ export interface SignupCardProps {
     email: string;
   }) => Promise<void> | void;
   submitLabel?: string;
+  onGithubClick?: () => void;
+  onGoogleClick?: () => void;
 }
 
 export interface SigninCardProps {
@@ -27,6 +29,7 @@ export interface SigninCardProps {
   }) => Promise<void> | void;
   submitLabel?: string;
   onGithubClick?: () => void;
+  onGoogleClick?: () => void;
 }
 
 export function SignupCard({
@@ -36,6 +39,8 @@ export function SignupCard({
   errorMessage,
   onSubmit,
   submitLabel = "Sign up",
+  onGithubClick,
+  onGoogleClick,
 }: SignupCardProps) {
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
@@ -65,7 +70,7 @@ export function SignupCard({
 
           {/* Social Login Buttons */}
           <div className={styles.socialRow}>
-            <button type="button" className={styles.socialButton}>
+            <button type="button" className={styles.socialButton} onClick={onGoogleClick}>
               <svg className={styles.socialIcon} viewBox="0 0 24 24">
                 <path
                   fill="currentColor"
@@ -86,18 +91,14 @@ export function SignupCard({
               </svg>
               Continue with Google
             </button>
-            <button type="button" className={styles.socialButton}>
-              <svg className={styles.socialIcon} viewBox="0 0 24 24">
+            <button type="button" className={styles.socialButton} onClick={onGithubClick}>
+              <svg className={styles.socialIcon} viewBox="0 0 24 24" aria-hidden="true">
                 <path
                   fill="currentColor"
-                  d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09z"
-                />
-                <path
-                  fill="currentColor"
-                  d="M15.53 3.83c.893-1.09 1.477-2.602 1.306-4.089-1.265.056-2.847.875-3.758 1.944-.806.942-1.526 2.486-1.34 3.938 1.421.106 2.88-.717 3.792-1.793z"
+                  d="M12 .5C5.73.5.98 5.24.98 11.52c0 4.86 3.15 8.98 7.51 10.43.55.1.75-.24.75-.54 0-.27-.01-1.15-.02-2.08-3.05.66-3.7-1.29-3.7-1.29-.5-1.28-1.22-1.63-1.22-1.63-.99-.67.08-.66.08-.66 1.1.08 1.67 1.13 1.67 1.13.97 1.66 2.55 1.18 3.17.9.1-.7.38-1.18.69-1.45-2.43-.28-4.99-1.22-4.99-5.44 0-1.2.43-2.17 1.14-2.94-.12-.28-.5-1.4.11-2.91 0 0 .95-.3 3.11 1.12.9-.25 1.86-.38 2.82-.39.96.01 1.92.14 2.82.39 2.16-1.42 3.11-1.12 3.11-1.12.61 1.51.23 2.63.11 2.91.71.77 1.14 1.74 1.14 2.94 0 4.23-2.57 5.15-5.01 5.42.39.34.74 1.01.74 2.03 0 1.47-.01 2.65-.01 3.01 0 .3.2.65.76.54 4.35-1.46 7.5-5.57 7.5-10.43C23.02 5.24 18.27.5 12 .5z"
                 />
               </svg>
-              Continue with Apple
+              Continue with GitHub
             </button>
           </div>
 
@@ -183,6 +184,7 @@ export function SigninCard({
   onSubmit,
   submitLabel = "Sign in",
   onGithubClick,
+  onGoogleClick,
 }: SigninCardProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -211,7 +213,7 @@ export function SigninCard({
 
           {/* Social Login Buttons */}
           <div className={styles.socialRow}>
-            <button type="button" className={styles.socialButton}>
+            <button type="button" className={styles.socialButton} onClick={onGoogleClick}>
               <svg className={styles.socialIcon} viewBox="0 0 24 24">
                 <path
                   fill="currentColor"

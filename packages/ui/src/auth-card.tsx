@@ -9,7 +9,7 @@ export interface AuthCardProps {
   submitting?: boolean;
   errorMessage?: string | null;
   onSubmit: (args: {
-    username: string;
+    email: string;
     password: string;
   }) => Promise<void> | void;
   footer?: React.ReactNode;
@@ -23,12 +23,12 @@ export function AuthCard({
   onSubmit,
   footer,
 }: AuthCardProps) {
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    await onSubmit({ username, password });
+    await onSubmit({ email, password });
   }
 
   return (
@@ -40,19 +40,19 @@ export function AuthCard({
           <div className={styles.error}>{errorMessage}</div>
         ) : null}
 
-        <label htmlFor="username" className={styles.label}>
+        <label htmlFor="email" className={styles.label}>
           Username
         </label>
         <input
-          id="username"
-          name="username"
+          id="email"
+          name="email"
           type="text"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
           className={styles.input}
-          placeholder="Enter username"
+          placeholder="Enter email"
           required
-          autoComplete="username"
+          autoComplete="email"
         />
 
         <label htmlFor="password" className={styles.label}>
