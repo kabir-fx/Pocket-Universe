@@ -44,6 +44,11 @@ function Dashboard() {
           return;
         }
 
+        // Debug: Log received galaxies
+        console.log("Dashboard - Received", body?.length || 0, "galaxies");
+        body?.forEach((galaxy: any, index: number) => {
+          console.log(`  Galaxy ${index}: ${galaxy.name} (${galaxy._count?.planets || 0} planets)`);
+        });
         setGalaxies(body);
       } catch {
         setError("Failed to load data");

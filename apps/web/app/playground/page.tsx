@@ -107,7 +107,7 @@ function Homeer() {
   return (
     <PlgCard
       title="Create Your Universe"
-      subtitle="Build galaxies and planets to organize your thoughts and ideas"
+      subtitle="Build customizable folders to organize your links and ideas"
       submitting={submitting}
       errorMsg={errorMsg ?? (errorParam ? "Invalid input" : null)}
       successMsg={successMsg}
