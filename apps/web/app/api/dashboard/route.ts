@@ -33,8 +33,8 @@ export async function GET() {
     where: {
       userId: session.user.id,
       galaxies: {
-        none: {} // Planets with no associated galaxies
-      }
+        none: {}, // Planets with no associated galaxies
+      },
     },
     select: {
       id: true,
