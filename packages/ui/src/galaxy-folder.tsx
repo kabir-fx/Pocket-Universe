@@ -28,14 +28,22 @@ export function GalaxyFolder({
 
   useEffect(() => {
     if (typeof window !== "undefined" && "matchMedia" in window) {
-      prefersReducedMotionRef.current = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      prefersReducedMotionRef.current = window.matchMedia(
+        "(prefers-reduced-motion: reduce)",
+      ).matches;
     }
     return () => {
       if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
     };
   }, []);
 
-  function setVars(rxDeg: number, ryDeg: number, tzPx: number, sweepXPercent: number, sweepYPercent: number) {
+  function setVars(
+    rxDeg: number,
+    ryDeg: number,
+    tzPx: number,
+    sweepXPercent: number,
+    sweepYPercent: number,
+  ) {
     const el = cardRef.current;
     if (!el) return;
     el.style.setProperty("--rx", `${rxDeg}deg`);

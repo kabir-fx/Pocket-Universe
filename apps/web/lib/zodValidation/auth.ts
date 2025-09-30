@@ -1,7 +1,11 @@
 import { z } from "zod";
 
 export const CredentialsSchema = z.object({
-  email: z.string().trim().toLowerCase().email({ message: "Enter a valid email" }),
+  email: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .email({ message: "Enter a valid email" }),
   password: z
     .string()
     .min(8, { message: "Password must be at least 8 characters" })
@@ -18,4 +22,3 @@ export const SignupSchema = CredentialsSchema.extend({
 
 export type CredentialsInput = z.infer<typeof CredentialsSchema>;
 export type SignupInput = z.infer<typeof SignupSchema>;
-

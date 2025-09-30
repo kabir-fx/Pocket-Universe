@@ -23,10 +23,7 @@ export interface SigninCardProps {
   subtitle?: string;
   submitting?: boolean;
   errorMessage?: string | null;
-  onSubmit: (args: {
-    email: string;
-    password: string;
-  }) => Promise<void> | void;
+  onSubmit: (args: { email: string; password: string }) => Promise<void> | void;
   submitLabel?: string;
   onGithubClick?: () => void;
   onGoogleClick?: () => void;
@@ -70,7 +67,11 @@ export function SignupCard({
 
           {/* Social Login Buttons */}
           <div className={styles.socialRow}>
-            <button type="button" className={styles.socialButton} onClick={onGoogleClick}>
+            <button
+              type="button"
+              className={styles.socialButton}
+              onClick={onGoogleClick}
+            >
               <svg className={styles.socialIcon} viewBox="0 0 24 24">
                 <path
                   fill="currentColor"
@@ -91,8 +92,16 @@ export function SignupCard({
               </svg>
               Continue with Google
             </button>
-            <button type="button" className={styles.socialButton} onClick={onGithubClick}>
-              <svg className={styles.socialIcon} viewBox="0 0 24 24" aria-hidden="true">
+            <button
+              type="button"
+              className={styles.socialButton}
+              onClick={onGithubClick}
+            >
+              <svg
+                className={styles.socialIcon}
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
                 <path
                   fill="currentColor"
                   d="M12 .5C5.73.5.98 5.24.98 11.52c0 4.86 3.15 8.98 7.51 10.43.55.1.75-.24.75-.54 0-.27-.01-1.15-.02-2.08-3.05.66-3.7-1.29-3.7-1.29-.5-1.28-1.22-1.63-1.22-1.63-.99-.67.08-.66.08-.66 1.1.08 1.67 1.13 1.67 1.13.97 1.66 2.55 1.18 3.17.9.1-.7.38-1.18.69-1.45-2.43-.28-4.99-1.22-4.99-5.44 0-1.2.43-2.17 1.14-2.94-.12-.28-.5-1.4.11-2.91 0 0 .95-.3 3.11 1.12.9-.25 1.86-.38 2.82-.39.96.01 1.92.14 2.82.39 2.16-1.42 3.11-1.12 3.11-1.12.61 1.51.23 2.63.11 2.91.71.77 1.14 1.74 1.14 2.94 0 4.23-2.57 5.15-5.01 5.42.39.34.74 1.01.74 2.03 0 1.47-.01 2.65-.01 3.01 0 .3.2.65.76.54 4.35-1.46 7.5-5.57 7.5-10.43C23.02 5.24 18.27.5 12 .5z"
@@ -213,7 +222,11 @@ export function SigninCard({
 
           {/* Social Login Buttons */}
           <div className={styles.socialRow}>
-            <button type="button" className={styles.socialButton} onClick={onGoogleClick}>
+            <button
+              type="button"
+              className={styles.socialButton}
+              onClick={onGoogleClick}
+            >
               <svg className={styles.socialIcon} viewBox="0 0 24 24">
                 <path
                   fill="currentColor"
@@ -234,8 +247,16 @@ export function SigninCard({
               </svg>
               Continue with Google
             </button>
-            <button type="button" className={styles.socialButton} onClick={onGithubClick}>
-              <svg className={styles.socialIcon} viewBox="0 0 24 24" aria-hidden="true">
+            <button
+              type="button"
+              className={styles.socialButton}
+              onClick={onGithubClick}
+            >
+              <svg
+                className={styles.socialIcon}
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
                 <path
                   fill="currentColor"
                   d="M12 .5C5.73.5.98 5.24.98 11.52c0 4.86 3.15 8.98 7.51 10.43.55.1.75-.24.75-.54 0-.27-.01-1.15-.02-2.08-3.05.66-3.7-1.29-3.7-1.29-.5-1.28-1.22-1.63-1.22-1.63-.99-.67.08-.66.08-.66 1.1.08 1.67 1.13 1.67 1.13.97 1.66 2.55 1.18 3.17.9.1-.7.38-1.18.69-1.45-2.43-.28-4.99-1.22-4.99-5.44 0-1.2.43-2.17 1.14-2.94-.12-.28-.5-1.4.11-2.91 0 0 .95-.3 3.11 1.12.9-.25 1.86-.38 2.82-.39.96.01 1.92.14 2.82.39 2.16-1.42 3.11-1.12 3.11-1.12.61 1.51.23 2.63.11 2.91.71.77 1.14 1.74 1.14 2.94 0 4.23-2.57 5.15-5.01 5.42.39.34.74 1.01.74 2.03 0 1.47-.01 2.65-.01 3.01 0 .3.2.65.76.54 4.35-1.46 7.5-5.57 7.5-10.43C23.02 5.24 18.27.5 12 .5z"

@@ -18,12 +18,12 @@ export const authOptions: NextAuthOptions = {
   // Configure one or more authentication providers
   providers: [
     GithubProvider({
-        clientId: process.env.GITHUB_ID || "",
-        clientSecret: process.env.GITHUB_SECRET || "",
+      clientId: process.env.GITHUB_ID || "",
+      clientSecret: process.env.GITHUB_SECRET || "",
     }),
     GoogleProvider({
-        clientId: process.env.GOOGLE_CLIENT_ID || "",
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET || ""
+      clientId: process.env.GOOGLE_CLIENT_ID || "",
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
     }),
     CredentialsProvider({
       // The name to display on the sign in form (e.g. "Sign in with...")
@@ -61,10 +61,15 @@ export const authOptions: NextAuthOptions = {
 
         if (userExists) {
           if (!userExists?.password) {
-            console.log("Password not set for this account. Use OAuth for Login");
+            console.log(
+              "Password not set for this account. Use OAuth for Login",
+            );
             return null;
           }
-          const decryptedPass = await brcypt.compare(password, userExists.password);
+          const decryptedPass = await brcypt.compare(
+            password,
+            userExists.password,
+          );
           if (!decryptedPass) {
             console.log("Incorrect Password");
             return null;
@@ -92,7 +97,6 @@ export const authOptions: NextAuthOptions = {
 
   callbacks: {
     async jwt({ token, user }: any) {
-
       return token;
     },
 

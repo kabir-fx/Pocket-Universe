@@ -2,7 +2,12 @@
 
 import { FormEvent, useState } from "react";
 import styles from "./playground-card.module.css";
-import { FolderIcon, SparklesIcon, ChevronDownIcon, PlusIcon } from "@heroicons/react/24/outline";
+import {
+  FolderIcon,
+  SparklesIcon,
+  ChevronDownIcon,
+  PlusIcon,
+} from "@heroicons/react/24/outline";
 
 export interface PlgCardProps {
   title?: string;
@@ -63,7 +68,7 @@ export function PlgCard({
         className={styles.cardWide}
         style={{
           ...(cardBackgroundColor ? { background: cardBackgroundColor } : {}),
-          ...(showShadows ? {} : { boxShadow: 'none' }),
+          ...(showShadows ? {} : { boxShadow: "none" }),
         }}
       >
         {/* Decorative plus signs for bottom corners */}
@@ -113,7 +118,7 @@ export function PlgCard({
                         onChange={(e) => setNewGalaxyName(e.target.value)}
                         autoFocus
                         onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
+                          if (e.key === "Enter") {
                             const committed = newGalaxyName.trim();
                             if (committed) {
                               setGalaxy(committed);
@@ -122,7 +127,7 @@ export function PlgCard({
                             setIsTypingGalaxy(false);
                             setNewGalaxyName("");
                           }
-                          if (e.key === 'Escape') {
+                          if (e.key === "Escape") {
                             setIsTypingGalaxy(false);
                             setNewGalaxyName("");
                           }

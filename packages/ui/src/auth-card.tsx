@@ -8,10 +8,7 @@ export interface AuthCardProps {
   subtitle?: string;
   submitting?: boolean;
   errorMessage?: string | null;
-  onSubmit: (args: {
-    email: string;
-    password: string;
-  }) => Promise<void> | void;
+  onSubmit: (args: { email: string; password: string }) => Promise<void> | void;
   footer?: React.ReactNode;
 }
 

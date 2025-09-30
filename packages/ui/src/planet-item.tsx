@@ -1,7 +1,11 @@
 "use client";
 
 import { formatDistanceToNow } from "date-fns";
-import { ClipboardIcon, CheckIcon, TrashIcon } from "@heroicons/react/24/outline";
+import {
+  ClipboardIcon,
+  CheckIcon,
+  TrashIcon,
+} from "@heroicons/react/24/outline";
 import { useState } from "react";
 import styles from "./dashboard.module.css";
 
@@ -75,7 +79,9 @@ export function PlanetItem({ content, createdAt }: PlanetItemProps) {
           onClick={handleDelete}
           disabled={isDeleting}
         >
-          <TrashIcon className={`${styles.deleteIcon} ${isDeleting ? styles.deleting : ""}`} />
+          <TrashIcon
+            className={`${styles.deleteIcon} ${isDeleting ? styles.deleting : ""}`}
+          />
         </button>
         <div className={styles.planetTime}>
           {formatDistanceToNow(new Date(createdAt), { addSuffix: true })}

@@ -13,9 +13,9 @@ export default function PlaygroundLayout({
         className="min-h-screen"
         style={{
           backgroundImage: 'url("/image2.png")',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat',
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
         }}
       >
         {children}

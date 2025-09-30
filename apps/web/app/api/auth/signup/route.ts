@@ -10,14 +10,17 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json(
       { error: parsed.error.issues?.[0]?.message || "Invalid input" },
-      { status: 400 }
+      { status: 400 },
     );
   }
   const { name, password, email } = parsed.data;
 
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing)
-    return NextResponse.json({ error: "Email ID already exists" }, { status: 409 });
+    return NextResponse.json(
+      { error: "Email ID already exists" },
+      { status: 409 },
+    );
 
   const passwordHash = await hash(password, 12);
 
