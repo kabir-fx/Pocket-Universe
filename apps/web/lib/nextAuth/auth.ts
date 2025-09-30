@@ -8,6 +8,7 @@ import GoogleProvider from "next-auth/providers/google";
 import type { NextAuthOptions } from "next-auth";
 
 import brcypt from "bcryptjs";
+import { CredentialsSchema } from "../zodValidation/auth";
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma) as Adapter,
@@ -44,11 +45,17 @@ export const authOptions: NextAuthOptions = {
         },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials.password) return null;
+        const parsed = CredentialsSchema.safeParse(credentials ?? {});
+        if (!parsed.success) {
+          console.log("Invalid credentials payload");
+          return null;
+        }
+
+        const { email, password } = parsed.data;
 
         const userExists = await prisma.user.findFirst({
           where: {
-            email: credentials.email,
+            email,
           },
         });
 
@@ -57,7 +64,7 @@ export const authOptions: NextAuthOptions = {
             console.log("Password not set for this account. Use OAuth for Login");
             return null;
           }
-          const decryptedPass = await brcypt.compare(credentials.password, userExists.password);
+          const decryptedPass = await brcypt.compare(password, userExists.password);
           if (!decryptedPass) {
             console.log("Incorrect Password");
             return null;

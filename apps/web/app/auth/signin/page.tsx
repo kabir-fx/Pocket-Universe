@@ -4,6 +4,7 @@ import { Suspense, useState } from "react";
 import { signIn } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import { SigninCard } from "@repo/ui/signup-card";
+import { CredentialsSchema } from "../../../lib/zodValidation/auth";
 
 function SignInInner() {
   const [submitting, setSubmitting] = useState(false);
@@ -19,6 +20,11 @@ function SignInInner() {
   }) {
     setSubmitting(true);
     try {
+      const parsed = CredentialsSchema.safeParse({ email, password });
+      if (!parsed.success) {
+        return;
+      }
+
       await signIn("credentials", {
         email,
         password,

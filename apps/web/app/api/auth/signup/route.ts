@@ -2,11 +2,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { hash } from "bcryptjs";
 import prisma from "@repo/db/prisma";
+import { SignupSchema } from "../../../../lib/zodValidation/auth";
 
 export async function POST(req: NextRequest) {
-  const { name, password, email } = await req.json();
-  if (!name || !password || !email)
-    return NextResponse.json({ error: "Missing cred" }, { status: 400 });
+  const body = await req.json();
+  const parsed = SignupSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: parsed.error.issues?.[0]?.message || "Invalid input" },
+      { status: 400 }
+    );
+  }
+  const { name, password, email } = parsed.data;
 
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing)

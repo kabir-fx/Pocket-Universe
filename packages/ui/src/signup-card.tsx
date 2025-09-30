@@ -115,24 +115,24 @@ export function SignupCard({
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className={styles.input}
-              placeholder="Enter email"
+              placeholder="Enter your email account"
               required
               autoComplete="email"
             />
 
-            <label htmlFor="email" className={styles.label}>
-              Username
+            <label htmlFor="name" className={styles.label}>
+              Name
             </label>
             <input
-              id="email"
-              name="email"
+              id="name"
+              name="name"
               type="text"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
               className={styles.input}
-              placeholder="Choose an email account"
+              placeholder="Enter your name"
               required
-              autoComplete="email"
+              autoComplete="name"
             />
 
             <label htmlFor="password" className={styles.label}>
@@ -248,12 +248,12 @@ export function SigninCard({
           <div className={styles.divider}>OR</div>
 
           <form onSubmit={handleSubmit}>
-            <label htmlFor="username" className={styles.label}>
-              Username
+            <label htmlFor="email" className={styles.label}>
+              Email
             </label>
             <input
-              id="username"
-              name="username"
+              id="email"
+              name="email"
               type="text"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
