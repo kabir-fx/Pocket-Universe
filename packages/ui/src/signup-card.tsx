@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import styles from "./auth-card.module.css";
 
 export interface SignupCardProps {
@@ -8,6 +8,7 @@ export interface SignupCardProps {
   subtitle?: string;
   submitting?: boolean;
   errorMessage?: string | null;
+  initialEmail?: string;
   onSubmit: (args: {
     name: string;
     password: string;
@@ -34,6 +35,7 @@ export function SignupCard({
   subtitle,
   submitting = false,
   errorMessage,
+  initialEmail = "",
   onSubmit,
   submitLabel = "Sign up",
   onGithubClick,
@@ -41,7 +43,11 @@ export function SignupCard({
 }: SignupCardProps) {
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(initialEmail);
+
+  useEffect(() => {
+    setEmail(initialEmail);
+  }, [initialEmail]);
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
