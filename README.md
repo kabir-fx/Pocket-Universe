@@ -89,7 +89,7 @@ pnpm install
 
 ### Configure Environment
 
-Create `apps/web/.env.local`:
+Create `apps/web/.env`:
 
 ```bash
 DATABASE_URL=postgres://USER:PASSWORD@HOST:PORT/DB
