@@ -2,11 +2,11 @@
 
 import SignupCard from "@repo/ui/signup-card";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { signIn } from "next-auth/react";
 import { SignupSchema } from "../../../lib/zodValidation/auth";
 
-export default function SignUpPage() {
+function SignUpForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const prefilledEmail = searchParams.get("email") || "";
@@ -60,5 +60,13 @@ export default function SignUpPage() {
       onGithubClick={() => signIn("github", { callbackUrl: "/playground" })}
       onGoogleClick={() => signIn("google", { callbackUrl: "/playground" })}
     />
+  );
+}
+
+export default function SignUpPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <SignUpForm />
+    </Suspense>
   );
 }
