@@ -46,7 +46,7 @@ export default function Home() {
             <div className={styles.rightCol}>
               <p className={styles.supporting}>
                 Keep everything you save - connected, organized, and easy to
-                access notes.
+                access.
               </p>
               <form
                 className={styles.emailForm}
