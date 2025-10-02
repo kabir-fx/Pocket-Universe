@@ -269,6 +269,29 @@
   color: #10b981;
 }
 
+/* Edit button */
+.editBtn {
+  border: none;
+  background: transparent;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  transition: all 0.2s ease;
+}
+
+.editBtn:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: #374151;
+}
+
+.editIcon {
+  width: 16px;
+  height: 16px;
+}
+
 /* Delete button */
 .deleteBtn {
   border: none;
@@ -299,6 +322,96 @@
 
 .deleting {
   animation: spin 1s linear infinite;
+}
+
+/* Edit input */
+.editInput {
+  width: 100%;
+  min-height: 60px;
+  padding: 8px 12px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.5;
+  font-family: inherit;
+  resize: vertical;
+  transition: border-color 0.2s ease;
+  background: #ffffff;
+  color: #374151;
+}
+
+.editInput:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.editInput:disabled {
+  background: #f9fafb;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.editActions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  align-items: center;
+}
+
+.saveBtn {
+  border: none;
+  background: #34d399;
+  color: #f7f7f8;
+  cursor: pointer;
+  padding: 6px 12px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  min-width: 3vw;
+  height: 3.5vh;
+}
+
+.saveBtn:hover:not(:disabled) {
+  background: #f7f7f8;
+}
+
+.saveBtn:disabled {
+  background: #d1d5db;
+  cursor: not-allowed;
+}
+
+.saveIcon {
+  width: 2.5vh;
+  height: 3vw;
+}
+
+.cancelBtn {
+  border: none;
+  background: #ef4444;
+  color: white;
+  cursor: pointer;
+  padding: 6px 12px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  min-width: 3vw;
+  height: 3.5vh;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.cancelBtn:hover:not(:disabled) {
+  background: #dc2626;
+}
+
+.cancelBtn:disabled {
+  background: #d1d5db;
+  cursor: not-allowed;
 }
 
 /* Loading */
@@ -494,6 +607,56 @@
 
   .copyOk {
     color: #34d399;
+  }
+
+  /* Dark mode edit styles */
+  .editBtn {
+    color: #9ca3af;
+  }
+
+  .editBtn:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: #e5e7eb;
+  }
+
+  .editInput {
+    background: #374151;
+    border-color: #4b5563;
+    color: #e5e7eb;
+  }
+
+  .editInput:focus {
+    border-color: #60a5fa;
+    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.1);
+  }
+
+  .editInput:disabled {
+    background: #1f2937;
+    color: #6b7280;
+  }
+
+  .saveBtn {
+    background: #1f2937;
+  }
+
+  .saveBtn:hover:not(:disabled) {
+    background: #34d399;
+  }
+
+  .saveBtn:disabled {
+    background: #4b5563;
+  }
+
+  .cancelBtn {
+    background: #1f2937;
+  }
+
+  .cancelBtn:hover:not(:disabled) {
+    background: #dc2626;
+  }
+
+  .cancelBtn:disabled {
+    background: #4b5563;
   }
 
   /* Dark mode decorative lines */
