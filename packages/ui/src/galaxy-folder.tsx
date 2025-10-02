@@ -49,7 +49,7 @@ export function GalaxyFolder({
   function handleDelete() {
     if (
       confirm(
-        `Are you sure you want to delete the folder "${name}" and move all planets to Miscellaneous?`,
+        `Are you sure you want to delete the folder "${name}" and move all planets to Orphaned Planets Folder?`,
       )
     ) {
       onDelete?.(id, name);
@@ -162,12 +162,12 @@ export function GalaxyFolder({
             <div
               className={styles.cardTitle}
               onMouseEnter={() =>
-                name !== "Miscellaneous" && setShowEditIcon(true)
+                name !== "Orphaned Planets" && setShowEditIcon(true)
               }
               onMouseLeave={() => setShowEditIcon(false)}
             >
               {name}
-              {showEditIcon && name !== "Miscellaneous" && (
+              {showEditIcon && name !== "Orphaned Planets" && (
                 <button
                   className={styles.folderEditIcon}
                   onClick={handleStartEditName}
@@ -182,7 +182,7 @@ export function GalaxyFolder({
             {planetCount} planet{planetCount !== 1 ? "s" : ""}
           </div>
         </div>
-        {name !== "Miscellaneous" && (
+        {name !== "Orphaned Planets" && (
           <button
             className={styles.folderDeleteBtn}
             title="Delete folder"

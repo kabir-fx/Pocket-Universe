@@ -54,7 +54,7 @@ export async function GET() {
   // ALWAYS add virtual galaxy to allow creating new folders
   result.push({
     id: "orphaned-planets", // Virtual ID
-    name: "Miscellaneous",
+    name: "Orphaned Planets",
     planets: orphanedPlanets.length > 0 ? orphanedPlanets : [],
     _count: { planets: orphanedPlanets.length },
     isVirtual: true,
@@ -109,7 +109,7 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
-    // Check if this is the default "Miscellaneous" folder (virtual folder)
+    // Check if this is the default "Orphaned Planets" folder (virtual folder)
     if (id === "orphaned-planets") {
       return NextResponse.json(
         { error: "Can't delete default folder" },
@@ -210,7 +210,7 @@ export async function PUT(req: NextRequest) {
 
       return NextResponse.json(res);
     } else if (type === "folder") {
-      // Check if this is the default "Miscellaneous" folder (virtual folder with ID "orphaned-planets")
+      // Check if this is the default "Orphaned Planets" folder (virtual folder with ID "orphaned-planets")
       if (id === "orphaned-planets") {
         return NextResponse.json(
           { error: "Can't update default folder" },
