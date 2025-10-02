@@ -47,7 +47,11 @@ export function GalaxyFolder({
   }, []);
 
   function handleDelete() {
-    if (confirm(`Are you sure you want to delete the folder "${name}" and move all planets to Miscellaneous?`)) {
+    if (
+      confirm(
+        `Are you sure you want to delete the folder "${name}" and move all planets to Miscellaneous?`,
+      )
+    ) {
       onDelete?.(id, name);
     }
   }
@@ -79,10 +83,10 @@ export function GalaxyFolder({
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       e.preventDefault();
       handleSaveEditName();
-    } else if (e.key === 'Escape') {
+    } else if (e.key === "Escape") {
       handleCancelEditName();
     }
   }
@@ -157,7 +161,9 @@ export function GalaxyFolder({
           ) : (
             <div
               className={styles.cardTitle}
-              onMouseEnter={() => name !== "Miscellaneous" && setShowEditIcon(true)}
+              onMouseEnter={() =>
+                name !== "Miscellaneous" && setShowEditIcon(true)
+              }
               onMouseLeave={() => setShowEditIcon(false)}
             >
               {name}
@@ -182,7 +188,11 @@ export function GalaxyFolder({
             title="Delete folder"
             onClick={handleDelete}
           >
-            <TrashIcon className={styles.folderDeleteIcon} width={16} height={16} />
+            <TrashIcon
+              className={styles.folderDeleteIcon}
+              width={16}
+              height={16}
+            />
           </button>
         )}
       </div>
