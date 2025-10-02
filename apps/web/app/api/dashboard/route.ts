@@ -68,24 +68,88 @@ export async function GET() {
 export async function DELETE(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized " }, { status: 401 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { content } = await req.json();
+  const { type, id } = await req.json();
 
-  const res = await prisma.planet.deleteMany({
-    where: {
-      userId: session.user.id,
-      content: content,
-    },
-  });
-
-  if (!res) {
-    return NextResponse.json(
-      { error: "Failed Planet Deletion" },
-      { status: 400 },
-    );
+  // Validate required fields
+  if (!type) {
+    return NextResponse.json({ error: "Type is required" }, { status: 400 });
   }
 
-  return NextResponse.json(res);
+  if (type === "planet") {
+    if (!id) {
+      return NextResponse.json({ error: "ID is required for planet deletion" }, { status: 400 });
+    }
+
+    const res = await prisma.planet.deleteMany({
+      where: {
+        userId: session.user.id,
+        id: id,
+      },
+    });
+
+    if (res.count === 0) {
+      return NextResponse.json(
+        { error: "Planet not found or already deleted" },
+        { status: 404 },
+      );
+    }
+
+    return NextResponse.json(res);
+
+  } else if (type === "galaxy") {
+    if (!id) {
+      return NextResponse.json({ error: "ID is required for galaxy deletion" }, { status: 400 });
+    }
+
+    // Use transaction to ensure atomicity
+    const result = await prisma.$transaction(async (tx) => {
+      // First, find all planets in this galaxy
+      const planetsInGalaxy = await tx.planet.findMany({
+        where: {
+          userId: session.user.id,
+          galaxies: {
+            some: { id: id }
+          }
+        },
+        select: { id: true }
+      });
+
+      // Disconnect each planet from the galaxy individually
+      for (const planet of planetsInGalaxy) {
+        await tx.planet.update({
+          where: { id: planet.id },
+          data: {
+            galaxies: {
+              disconnect: { id: id }
+            }
+          }
+        });
+      }
+
+      // Then delete the galaxy
+      const res = await tx.galaxy.deleteMany({
+        where: {
+          userId: session.user.id,
+          id: id,
+        },
+      });
+
+      return res;
+    });
+
+    if (result.count === 0) {
+      return NextResponse.json(
+        { error: "Galaxy not found or already deleted" },
+        { status: 404 },
+      );
+    }
+
+    return NextResponse.json(result);
+
+  } else {
+    return NextResponse.json({ error: "Invalid type. Must be 'planet' or 'galaxy'" }, { status: 400 });
+  }
 }
