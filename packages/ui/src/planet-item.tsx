@@ -10,11 +10,12 @@ import { useState } from "react";
 import styles from "./dashboard.module.css";
 
 interface PlanetItemProps {
+  id: string;
   content: string;
   createdAt: Date;
 }
 
-export function PlanetItem({ content, createdAt }: PlanetItemProps) {
+export function PlanetItem({ id, content, createdAt }: PlanetItemProps) {
   const [copied, setCopied] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -38,7 +39,7 @@ export function PlanetItem({ content, createdAt }: PlanetItemProps) {
       const response = await fetch("/api/dashboard", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content }),
+        body: JSON.stringify({ type: "planet", id: id }),
       });
 
       if (response.ok) {

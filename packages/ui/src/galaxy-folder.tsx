@@ -106,6 +106,7 @@ export function GalaxyFolder({
             {planets.map((planet) => (
               <PlanetItem
                 key={planet.id}
+                id={planet.id}
                 content={planet.content}
                 createdAt={planet.createdAt}
               />
