@@ -121,6 +121,7 @@
   padding: 20px 24px 16px 24px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
   transform: translateZ(2px);
+  position: relative;
 }
 
 .cardHeaderContent {
@@ -128,6 +129,29 @@
   display: flex;
   align-items: baseline;
   justify-content: space-between;
+}
+
+.folderDeleteBtn {
+  border: none;
+  background: transparent;
+  color: #ef4444;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.folderDeleteBtn:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+}
+
+.folderDeleteIcon {
+  width: 16px;
+  height: 16px;
 }
 
 .icon {
@@ -544,6 +568,15 @@
 
   .icon {
     color: #9ca3af;
+  }
+
+  .folderDeleteBtn {
+    color: #f87171;
+  }
+
+  .folderDeleteBtn:hover {
+    background: rgba(248, 113, 113, 0.1);
+    color: #fca5a5;
   }
 
   .planetRow {

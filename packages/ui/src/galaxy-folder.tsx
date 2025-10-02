@@ -1,6 +1,6 @@
 "use client";
 
-import { FolderIcon } from "@heroicons/react/24/outline";
+import { FolderIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { PlanetItem } from "./planet-item";
 import { useEffect, useRef } from "react";
 import styles from "./dashboard.module.css";
@@ -12,20 +12,23 @@ interface Planet {
 }
 
 interface GalaxyFolderProps {
+  id: string;
   name: string;
   planets: Planet[];
   planetCount: number;
+  onDelete?: (id: string, name: string) => void;
 }
 
 export function GalaxyFolder({
+  id,
   name,
   planets,
   planetCount,
+  onDelete,
 }: GalaxyFolderProps) {
   const cardRef = useRef<HTMLDivElement | null>(null);
   const rafIdRef = useRef<number | null>(null);
   const prefersReducedMotionRef = useRef<boolean>(false);
-
   useEffect(() => {
     if (typeof window !== "undefined" && "matchMedia" in window) {
       prefersReducedMotionRef.current = window.matchMedia(
@@ -36,6 +39,12 @@ export function GalaxyFolder({
       if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
     };
   }, []);
+
+  function handleDelete() {
+    if (confirm(`Are you sure you want to delete the folder "${name}" and move all planets to Miscellaneous?`)) {
+      onDelete?.(id, name);
+    }
+  }
 
   function setVars(
     rxDeg: number,
@@ -98,6 +107,13 @@ export function GalaxyFolder({
             {planetCount} planet{planetCount !== 1 ? "s" : ""}
           </div>
         </div>
+        <button
+          className={styles.folderDeleteBtn}
+          title="Delete folder"
+          onClick={handleDelete}
+        >
+          <TrashIcon className={styles.folderDeleteIcon} width={16} height={16} />
+        </button>
       </div>
 
       <div className={styles.cardContent}>
