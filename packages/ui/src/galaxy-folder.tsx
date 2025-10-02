@@ -1,8 +1,8 @@
 "use client";
 
-import { FolderIcon, TrashIcon } from "@heroicons/react/24/outline";
+import { FolderIcon, TrashIcon, PencilIcon } from "@heroicons/react/24/outline";
 import { PlanetItem } from "./planet-item";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import styles from "./dashboard.module.css";
 
 interface Planet {
@@ -16,6 +16,7 @@ interface GalaxyFolderProps {
   name: string;
   planets: Planet[];
   planetCount: number;
+  onEdit?: (id: string, currentName: string) => void;
   onDelete?: (id: string, name: string) => void;
 }
 
@@ -24,11 +25,16 @@ export function GalaxyFolder({
   name,
   planets,
   planetCount,
+  onEdit,
   onDelete,
 }: GalaxyFolderProps) {
   const cardRef = useRef<HTMLDivElement | null>(null);
   const rafIdRef = useRef<number | null>(null);
   const prefersReducedMotionRef = useRef<boolean>(false);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editName, setEditName] = useState(name);
+  const [showEditIcon, setShowEditIcon] = useState(false);
+
   useEffect(() => {
     if (typeof window !== "undefined" && "matchMedia" in window) {
       prefersReducedMotionRef.current = window.matchMedia(
@@ -43,6 +49,41 @@ export function GalaxyFolder({
   function handleDelete() {
     if (confirm(`Are you sure you want to delete the folder "${name}" and move all planets to Miscellaneous?`)) {
       onDelete?.(id, name);
+    }
+  }
+
+  function handleStartEditName() {
+    setEditName(name);
+    setIsEditingName(true);
+    setShowEditIcon(false);
+  }
+
+  function handleSaveEditName() {
+    if (editName.trim() === name.trim()) {
+      setIsEditingName(false);
+      return;
+    }
+
+    if (!editName.trim()) {
+      alert("Folder name cannot be empty");
+      return;
+    }
+
+    onEdit?.(id, editName.trim());
+    setIsEditingName(false);
+  }
+
+  function handleCancelEditName() {
+    setEditName(name);
+    setIsEditingName(false);
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleSaveEditName();
+    } else if (e.key === 'Escape') {
+      handleCancelEditName();
     }
   }
 
@@ -102,18 +143,48 @@ export function GalaxyFolder({
       <div className={styles.cardHeader}>
         <FolderIcon className={styles.icon} width={20} height={20} />
         <div className={styles.cardHeaderContent}>
-          <div className={styles.cardTitle}>{name}</div>
+          {isEditingName ? (
+            <input
+              type="text"
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              onKeyDown={handleKeyDown}
+              onBlur={handleSaveEditName}
+              className={styles.folderNameInput}
+              placeholder="New Folder name..."
+              autoFocus
+            />
+          ) : (
+            <div
+              className={styles.cardTitle}
+              onMouseEnter={() => name !== "Miscellaneous" && setShowEditIcon(true)}
+              onMouseLeave={() => setShowEditIcon(false)}
+            >
+              {name}
+              {showEditIcon && name !== "Miscellaneous" && (
+                <button
+                  className={styles.folderEditIcon}
+                  onClick={handleStartEditName}
+                  title="Edit folder name"
+                >
+                  <PencilIcon width={12} height={12} />
+                </button>
+              )}
+            </div>
+          )}
           <div className={styles.cardMeta}>
             {planetCount} planet{planetCount !== 1 ? "s" : ""}
           </div>
         </div>
-        <button
-          className={styles.folderDeleteBtn}
-          title="Delete folder"
-          onClick={handleDelete}
-        >
-          <TrashIcon className={styles.folderDeleteIcon} width={16} height={16} />
-        </button>
+        {name !== "Miscellaneous" && (
+          <button
+            className={styles.folderDeleteBtn}
+            title="Delete folder"
+            onClick={handleDelete}
+          >
+            <TrashIcon className={styles.folderDeleteIcon} width={16} height={16} />
+          </button>
+        )}
       </div>
 
       <div className={styles.cardContent}>
