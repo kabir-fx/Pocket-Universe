@@ -89,7 +89,7 @@ export function PlanetItem({ id, content, createdAt }: PlanetItemProps) {
         body: JSON.stringify({
           type: "planet",
           id: id,
-          updatedData: editContent.trim()
+          updatedData: editContent.trim(),
         }),
       });
 
@@ -99,7 +99,7 @@ export function PlanetItem({ id, content, createdAt }: PlanetItemProps) {
         window.location.reload();
       } else {
         const error = await response.json();
-        alert(`Failed to update planet: ${error.error || 'Unknown error'}`);
+        alert(`Failed to update planet: ${error.error || "Unknown error"}`);
       }
     } catch (error) {
       console.error("Update error:", error);
@@ -110,10 +110,10 @@ export function PlanetItem({ id, content, createdAt }: PlanetItemProps) {
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSaveEdit();
-    } else if (e.key === 'Escape') {
+    } else if (e.key === "Escape") {
       handleCancelEdit();
     }
   }

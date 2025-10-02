@@ -80,7 +80,10 @@ export async function DELETE(req: NextRequest) {
 
   if (type === "planet") {
     if (!id) {
-      return NextResponse.json({ error: "ID is required for planet deletion" }, { status: 400 });
+      return NextResponse.json(
+        { error: "ID is required for planet deletion" },
+        { status: 400 },
+      );
     }
 
     const res = await prisma.planet.deleteMany({
@@ -98,15 +101,20 @@ export async function DELETE(req: NextRequest) {
     }
 
     return NextResponse.json(res);
-
   } else if (type === "folder") {
     if (!id) {
-      return NextResponse.json({ error: "ID is required for Folder deletion" }, { status: 400 });
+      return NextResponse.json(
+        { error: "ID is required for Folder deletion" },
+        { status: 400 },
+      );
     }
 
     // Check if this is the default "Miscellaneous" folder (virtual folder)
     if (id === "orphaned-planets") {
-      return NextResponse.json({ error: "Can't delete default folder" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Can't delete default folder" },
+        { status: 400 },
+      );
     }
 
     // Use transaction to ensure atomicity
@@ -116,10 +124,10 @@ export async function DELETE(req: NextRequest) {
         where: {
           userId: session.user.id,
           galaxies: {
-            some: { id: id }
-          }
+            some: { id: id },
+          },
         },
-        select: { id: true }
+        select: { id: true },
       });
 
       // Disconnect each planet from the galaxy individually
@@ -128,9 +136,9 @@ export async function DELETE(req: NextRequest) {
           where: { id: planet.id },
           data: {
             galaxies: {
-              disconnect: { id: id }
-            }
-          }
+              disconnect: { id: id },
+            },
+          },
         });
       }
 
@@ -153,9 +161,11 @@ export async function DELETE(req: NextRequest) {
     }
 
     return NextResponse.json(result);
-
   } else {
-    return NextResponse.json({ error: "Invalid type. Must be 'planet' or 'folder'" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Invalid type. Must be 'planet' or 'folder'" },
+      { status: 400 },
+    );
   }
 }
 
@@ -169,11 +179,21 @@ export async function PUT(req: NextRequest) {
 
   // Validate required fields
   if (!type || !id) {
-    return NextResponse.json({ error: "ID or Type is missing" }, { status: 400 });
+    return NextResponse.json(
+      { error: "ID or Type is missing" },
+      { status: 400 },
+    );
   }
 
-  if (!updatedData || typeof updatedData !== 'string' || updatedData.trim() === '') {
-    return NextResponse.json({ error: "Updated data must be a non-empty string" }, { status: 400 });
+  if (
+    !updatedData ||
+    typeof updatedData !== "string" ||
+    updatedData.trim() === ""
+  ) {
+    return NextResponse.json(
+      { error: "Updated data must be a non-empty string" },
+      { status: 400 },
+    );
   }
 
   try {
@@ -181,39 +201,48 @@ export async function PUT(req: NextRequest) {
       const res = await prisma.planet.update({
         where: {
           userId: session.user.id,
-          id: id
+          id: id,
         },
         data: {
-          content: updatedData.trim()
-        }
+          content: updatedData.trim(),
+        },
       });
 
       return NextResponse.json(res);
-
     } else if (type === "folder") {
       // Check if this is the default "Miscellaneous" folder (virtual folder with ID "orphaned-planets")
       if (id === "orphaned-planets") {
-        return NextResponse.json({ error: "Can't update default folder" }, { status: 400 });
+        return NextResponse.json(
+          { error: "Can't update default folder" },
+          { status: 400 },
+        );
       }
 
       const res = await prisma.galaxy.update({
         where: {
           userId: session.user.id,
-          id: id
+          id: id,
         },
         data: {
-          name: updatedData.trim()
-        }
+          name: updatedData.trim(),
+        },
       });
 
       return NextResponse.json(res);
-
     } else {
-      return NextResponse.json({ error: "Invalid type. Must be 'planet' or 'galaxy'" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid type. Must be 'planet' or 'galaxy'" },
+        { status: 400 },
+      );
     }
   } catch (error) {
     // Handle Prisma errors (e.g., record not found)
-    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
+    if (
+      error &&
+      typeof error === "object" &&
+      "code" in error &&
+      error.code === "P2025"
+    ) {
       return NextResponse.json({ error: "Item not found" }, { status: 404 });
     }
     console.error("Update error:", error);

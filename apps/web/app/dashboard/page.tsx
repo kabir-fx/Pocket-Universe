@@ -70,7 +70,7 @@ function Dashboard() {
         body: JSON.stringify({
           type: "folder",
           id: id,
-          updatedData: newName
+          updatedData: newName,
         }),
       });
 
@@ -79,7 +79,7 @@ function Dashboard() {
         window.location.reload();
       } else {
         const error = await response.json();
-        alert(`Failed to update folder: ${error.error || 'Unknown error'}`);
+        alert(`Failed to update folder: ${error.error || "Unknown error"}`);
       }
     } catch (error) {
       console.error("Edit galaxy error:", error);
@@ -94,7 +94,7 @@ function Dashboard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           type: "folder",
-          id: id
+          id: id,
         }),
       });
 
@@ -103,7 +103,7 @@ function Dashboard() {
         window.location.reload();
       } else {
         const error = await response.json();
-        alert(`Failed to delete folder: ${error.error || 'Unknown error'}`);
+        alert(`Failed to delete folder: ${error.error || "Unknown error"}`);
       }
     } catch (error) {
       console.error("Delete galaxy error:", error);
