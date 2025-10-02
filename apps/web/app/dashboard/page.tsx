@@ -62,6 +62,30 @@ function Dashboard() {
     fetchData();
   }, []);
 
+  const handleDeleteGalaxy = async (id: string, name: string) => {
+    try {
+      const response = await fetch("/api/dashboard", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "folder",
+          id: id
+        }),
+      });
+
+      if (response.ok) {
+        // Refresh the page to update the dashboard
+        window.location.reload();
+      } else {
+        const error = await response.json();
+        alert(`Failed to delete folder: ${error.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error("Delete galaxy error:", error);
+      alert("Failed to delete folder");
+    }
+  };
+
   if (loading) {
     return (
       <DashboardLayout>
@@ -116,9 +140,11 @@ function Dashboard() {
       {galaxies.map((galaxy) => (
         <GalaxyFolder
           key={galaxy.id}
+          id={galaxy.id}
           name={galaxy.name}
           planets={galaxy.planets}
           planetCount={galaxy._count.planets}
+          onDelete={handleDeleteGalaxy}
         />
       ))}
     </DashboardLayout>
