@@ -104,6 +104,11 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "ID is required for Folder deletion" }, { status: 400 });
     }
 
+    // Check if this is the default "Miscellaneous" folder (virtual folder)
+    if (id === "orphaned-planets") {
+      return NextResponse.json({ error: "Can't delete default folder" }, { status: 400 });
+    }
+
     // Use transaction to ensure atomicity
     const result = await prisma.$transaction(async (tx) => {
       // First, find all planets in this galaxy
@@ -185,7 +190,12 @@ export async function PUT(req: NextRequest) {
 
       return NextResponse.json(res);
 
-    } else if (type === "galaxy") {
+    } else if (type === "folder") {
+      // Check if this is the default "Miscellaneous" folder (virtual folder with ID "orphaned-planets")
+      if (id === "orphaned-planets") {
+        return NextResponse.json({ error: "Can't update default folder" }, { status: 400 });
+      }
+
       const res = await prisma.galaxy.update({
         where: {
           userId: session.user.id,

@@ -62,6 +62,31 @@ function Dashboard() {
     fetchData();
   }, []);
 
+  const handleEditGalaxy = async (id: string, newName: string) => {
+    try {
+      const response = await fetch("/api/dashboard", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "folder",
+          id: id,
+          updatedData: newName
+        }),
+      });
+
+      if (response.ok) {
+        // Refresh the page to update the dashboard
+        window.location.reload();
+      } else {
+        const error = await response.json();
+        alert(`Failed to update folder: ${error.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error("Edit galaxy error:", error);
+      alert("Failed to update folder");
+    }
+  };
+
   const handleDeleteGalaxy = async (id: string, name: string) => {
     try {
       const response = await fetch("/api/dashboard", {
@@ -144,6 +169,7 @@ function Dashboard() {
           name={galaxy.name}
           planets={galaxy.planets}
           planetCount={galaxy._count.planets}
+          onEdit={handleEditGalaxy}
           onDelete={handleDeleteGalaxy}
         />
       ))}
