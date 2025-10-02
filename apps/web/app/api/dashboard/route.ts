@@ -60,7 +60,7 @@ export async function GET() {
     isVirtual: true,
   });
 
-  console.log("API - Total galaxies returned:", result.length);
+  console.log("API - Total Folders returned:", result.length);
 
   return NextResponse.json(result);
 }
@@ -99,9 +99,9 @@ export async function DELETE(req: NextRequest) {
 
     return NextResponse.json(res);
 
-  } else if (type === "galaxy") {
+  } else if (type === "folder") {
     if (!id) {
-      return NextResponse.json({ error: "ID is required for galaxy deletion" }, { status: 400 });
+      return NextResponse.json({ error: "ID is required for Folder deletion" }, { status: 400 });
     }
 
     // Use transaction to ensure atomicity
@@ -142,7 +142,7 @@ export async function DELETE(req: NextRequest) {
 
     if (result.count === 0) {
       return NextResponse.json(
-        { error: "Galaxy not found or already deleted" },
+        { error: "Folder not found or already deleted" },
         { status: 404 },
       );
     }
@@ -150,6 +150,63 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json(result);
 
   } else {
-    return NextResponse.json({ error: "Invalid type. Must be 'planet' or 'galaxy'" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid type. Must be 'planet' or 'folder'" }, { status: 400 });
+  }
+}
+
+export async function PUT(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { type, id, updatedData } = await req.json();
+
+  // Validate required fields
+  if (!type || !id) {
+    return NextResponse.json({ error: "ID or Type is missing" }, { status: 400 });
+  }
+
+  if (!updatedData || typeof updatedData !== 'string' || updatedData.trim() === '') {
+    return NextResponse.json({ error: "Updated data must be a non-empty string" }, { status: 400 });
+  }
+
+  try {
+    if (type === "planet") {
+      const res = await prisma.planet.update({
+        where: {
+          userId: session.user.id,
+          id: id
+        },
+        data: {
+          content: updatedData.trim()
+        }
+      });
+
+      return NextResponse.json(res);
+
+    } else if (type === "galaxy") {
+      const res = await prisma.galaxy.update({
+        where: {
+          userId: session.user.id,
+          id: id
+        },
+        data: {
+          name: updatedData.trim()
+        }
+      });
+
+      return NextResponse.json(res);
+
+    } else {
+      return NextResponse.json({ error: "Invalid type. Must be 'planet' or 'galaxy'" }, { status: 400 });
+    }
+  } catch (error) {
+    // Handle Prisma errors (e.g., record not found)
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
+      return NextResponse.json({ error: "Item not found" }, { status: 404 });
+    }
+    console.error("Update error:", error);
+    return NextResponse.json({ error: "Update failed" }, { status: 500 });
   }
 }
