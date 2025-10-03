@@ -44,9 +44,11 @@ export async function GET() {
     orderBy: { createdAt: "desc" },
   });
 
-  // Try to enrich planets with AI reasoning using planetId link first, fallback to content match
+  // Try to enrich planets with AI reasoning and alternatives using planetId link first, fallback to content match
   let planetIdToReason: Record<string, string> = {};
   let contentToReason: Record<string, string> = {};
+  let planetIdToAlternatives: Record<string, string[]> = {};
+  let contentToAlternatives: Record<string, string[]> = {};
   const normalize = (s: string) => s.trim().replace(/\s+/g, ' ').slice(0, 500);
   try {
     const anyPrisma: any = prisma as any;
@@ -56,16 +58,23 @@ export async function GET() {
         where: { userId: session.user.id },
         orderBy: { createdAt: 'desc' },
         take: 200,
-        select: { planetId: true, contentPreview: true, reasoning: true, suggestedFolder: true },
+        select: { planetId: true, contentPreview: true, reasoning: true, alternatives: true, suggestedFolder: true },
       });
 
       const previewPairs = rows
         .filter((r: any) => typeof r?.contentPreview === 'string' && typeof r?.reasoning === 'string')
         .map((r: any) => ({ key: normalize(r.contentPreview as string), value: r.reasoning as string }));
 
+      const previewAltPairs = rows
+        .filter((r: any) => typeof r?.contentPreview === 'string' && Array.isArray(r?.alternatives))
+        .map((r: any) => ({ key: normalize(r.contentPreview as string), value: (r.alternatives as string[]).filter((x) => typeof x === 'string') }));
+
       for (const r of rows) {
         if (r?.planetId && typeof r.reasoning === 'string') {
           planetIdToReason[r.planetId as string] = r.reasoning as string;
+        }
+        if (r?.planetId && Array.isArray(r?.alternatives)) {
+          planetIdToAlternatives[r.planetId as string] = (r.alternatives as string[]).filter((x) => typeof x === 'string');
         }
       }
 
@@ -79,22 +88,34 @@ export async function GET() {
         return contains?.value;
       }
 
+      function findAlternativesFor(content: string): string[] | undefined {
+        const key = normalize(content);
+        const exact = previewAltPairs.find((p: any) => p.key === key);
+        if (exact) return exact.value;
+        const contains = previewAltPairs.find((p: any) => key.startsWith(p.key) || p.key.startsWith(key));
+        return contains?.value;
+      }
+
       // Build map for quick lookups
       for (const g of galaxies) {
         for (const p of g.planets) {
           const r = planetIdToReason[p.id] ?? findReasonFor(p.content);
+          const a = planetIdToAlternatives[p.id] ?? findAlternativesFor(p.content);
           if (r) contentToReason[normalize(p.content)] = r;
+          if (a && a.length) contentToAlternatives[normalize(p.content)] = a;
         }
       }
       for (const p of orphanedPlanets) {
         const r = planetIdToReason[p.id] ?? findReasonFor(p.content);
+        const a = planetIdToAlternatives[p.id] ?? findAlternativesFor(p.content);
         if (r) contentToReason[normalize(p.content)] = r;
+        if (a && a.length) contentToAlternatives[normalize(p.content)] = a;
       }
     }
     // Fallback when Prisma client lacks AICategorization model: query via raw SQL
     else if (typeof (prisma as any).$queryRawUnsafe === 'function') {
-      const rows: Array<{ planetId: string | null; contentPreview: string | null; reasoning: string | null; userId: string } > = await (prisma as any).$queryRawUnsafe(
-        `select "planetId", "contentPreview", "reasoning", "userId" from "AICategorization" where "userId" = $1 order by "createdAt" desc limit 500`,
+      const rows: Array<{ planetId: string | null; contentPreview: string | null; reasoning: string | null; alternatives: string[] | null; userId: string } > = await (prisma as any).$queryRawUnsafe(
+        `select "planetId", "contentPreview", "reasoning", "alternatives", "userId" from "AICategorization" where "userId" = $1 order by "createdAt" desc limit 500`,
         session.user.id
       );
 
@@ -102,9 +123,16 @@ export async function GET() {
         .filter((r) => typeof r?.contentPreview === 'string' && typeof r?.reasoning === 'string')
         .map((r) => ({ key: normalize(r.contentPreview as string), value: r.reasoning as string }));
 
+      const previewAltPairs = rows
+        .filter((r) => typeof r?.contentPreview === 'string' && Array.isArray(r?.alternatives))
+        .map((r) => ({ key: normalize(r.contentPreview as string), value: (r.alternatives as string[]).filter((x) => typeof x === 'string') }));
+
       for (const r of rows) {
         if (r?.planetId && typeof r.reasoning === 'string') {
           planetIdToReason[r.planetId as string] = r.reasoning as string;
+        }
+        if (r?.planetId && Array.isArray(r?.alternatives)) {
+          planetIdToAlternatives[r.planetId as string] = (r.alternatives as string[]).filter((x) => typeof x === 'string');
         }
       }
 
@@ -116,32 +144,46 @@ export async function GET() {
         return contains?.value;
       }
 
+      function findAlternativesFor(content: string): string[] | undefined {
+        const key = normalize(content);
+        const exact = previewAltPairs.find((p: any) => p.key === key);
+        if (exact) return exact.value;
+        const contains = previewAltPairs.find((p: any) => key.startsWith(p.key) || p.key.startsWith(key));
+        return contains?.value;
+      }
+
       for (const g of galaxies) {
         for (const p of g.planets) {
           const r = planetIdToReason[p.id] ?? findReasonFor(p.content);
+          const a = planetIdToAlternatives[p.id] ?? findAlternativesFor(p.content);
           if (r) contentToReason[normalize(p.content)] = r;
+          if (a && a.length) contentToAlternatives[normalize(p.content)] = a;
         }
       }
       for (const p of orphanedPlanets) {
         const r = planetIdToReason[p.id] ?? findReasonFor(p.content);
+        const a = planetIdToAlternatives[p.id] ?? findAlternativesFor(p.content);
         if (r) contentToReason[normalize(p.content)] = r;
+        if (a && a.length) contentToAlternatives[normalize(p.content)] = a;
       }
     }
   } catch {
     // If the table or client isn't available, skip enrichment silently
   }
 
-  // Enrich with reasoning if available
+  // Enrich with reasoning and alternatives if available
   const enrichedGalaxies = galaxies.map((g) => ({
     ...g,
     planets: g.planets.map((p) => ({
       ...p,
       reasoning: planetIdToReason[p.id] ?? contentToReason[normalize(p.content)] ?? null,
+      alternatives: planetIdToAlternatives[p.id] ?? contentToAlternatives[normalize(p.content)] ?? [],
     })),
   }));
   const enrichedOrphaned = orphanedPlanets.map((p) => ({
     ...p,
     reasoning: planetIdToReason[p.id] ?? contentToReason[normalize(p.content)] ?? null,
+    alternatives: planetIdToAlternatives[p.id] ?? contentToAlternatives[normalize(p.content)] ?? [],
   }));
 
   console.log("API - User ID:", session.user.id);
@@ -199,6 +241,14 @@ export async function DELETE(req: NextRequest) {
         { status: 404 },
       );
     }
+
+    // After deleting a planet, remove any folders that became empty
+    await prisma.galaxy.deleteMany({
+      where: {
+        userId: session.user.id,
+        planets: { none: {} },
+      },
+    });
 
     return NextResponse.json(res);
   } else if (type === "folder") {
@@ -347,5 +397,108 @@ export async function PUT(req: NextRequest) {
     }
     console.error("Update error:", error);
     return NextResponse.json({ error: "Update failed" }, { status: 500 });
+  }
+}
+
+export async function POST(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const body = await req.json().catch(() => ({}));
+    const action = body?.action;
+    if (action !== 'attachPlanetToFolder') {
+      return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+    }
+
+    const planetId: string | undefined = body?.planetId;
+    const rawFolderName: string | undefined = body?.folderName;
+    const folderName = (rawFolderName ?? '').toString().trim().slice(0, 80);
+
+    if (!planetId || !folderName) {
+      return NextResponse.json({ error: "planetId and folderName are required" }, { status: 400 });
+    }
+
+    // Verify planet belongs to user
+    const planet = await prisma.planet.findFirst({
+      where: { id: planetId, userId: session.user.id },
+      select: { id: true },
+    });
+    if (!planet) {
+      return NextResponse.json({ error: "Planet not found" }, { status: 404 });
+    }
+
+    // Find or create the folder for this user
+    let folder = await prisma.galaxy.findFirst({
+      where: { userId: session.user.id, name: folderName },
+      select: { id: true },
+    });
+    if (!folder) {
+      try {
+        folder = await prisma.galaxy.create({
+          data: { userId: session.user.id, name: folderName, shareable: false },
+          select: { id: true },
+        });
+      } catch (e: any) {
+        if (e?.code === 'P2002') {
+          folder = await prisma.galaxy.findFirst({
+            where: { userId: session.user.id, name: folderName },
+            select: { id: true },
+          });
+        } else {
+          throw e;
+        }
+      }
+    }
+    if (!folder) {
+      return NextResponse.json({ error: "Folder resolution failed" }, { status: 500 });
+    }
+
+    // Move planet: disconnect from all existing folders for this user, then connect to the selected folder
+    await prisma.$transaction(async (tx) => {
+      const existing = await tx.galaxy.findMany({
+        where: {
+          userId: session.user.id,
+          planets: { some: { id: planetId } },
+        },
+        select: { id: true },
+      });
+
+      if (existing.length > 0) {
+        await tx.planet.update({
+          where: { id: planetId },
+          data: {
+            galaxies: {
+              disconnect: existing.map((g) => ({ id: g.id })),
+            },
+          },
+        });
+      }
+
+      // Now connect to the target folder (idempotent-ish; if already present, it's fine)
+      await tx.planet.update({
+        where: { id: planetId },
+        data: { galaxies: { connect: { id: folder.id } } },
+      });
+
+      // Auto-delete any folders that became empty (excluding the target folder)
+      const candidateIds = existing.map((g) => g.id).filter((id) => id !== folder!.id);
+      if (candidateIds.length > 0) {
+        await tx.galaxy.deleteMany({
+          where: {
+            userId: session.user.id,
+            id: { in: candidateIds },
+            planets: { none: {} },
+          },
+        });
+      }
+    });
+
+    return NextResponse.json({ ok: true, folderId: folder.id, moved: true });
+  } catch (error) {
+    console.error('Dashboard POST error:', error);
+    return NextResponse.json({ error: "Request failed" }, { status: 500 });
   }
 }

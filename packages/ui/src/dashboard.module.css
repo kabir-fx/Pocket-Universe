@@ -335,6 +335,58 @@
   white-space: normal;
 }
 
+.infoOverlay {
+  pointer-events: none;
+}
+
+.infoOverlay .infoBubble {
+  pointer-events: auto;
+}
+
+.infoSection {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.infoSection + .infoSection {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255,255,255,0.12);
+}
+
+.infoSectionTitle {
+  font-weight: 600;
+  color: #e5e7eb;
+}
+
+.infoSectionBody {
+  color: #f3f4f6;
+}
+
+.infoAltButtons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.altBtn {
+  border: 1px solid rgba(255,255,255,0.16);
+  background: rgba(255,255,255,0.06);
+  color: #e5e7eb;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.altBtn:hover {
+  background: rgba(59,130,246,0.18);
+  border-color: rgba(59,130,246,0.45);
+  color: #f9fafb;
+}
+
 .infoBubble::-webkit-scrollbar {
   width: 6px;
 }

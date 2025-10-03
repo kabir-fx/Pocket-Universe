@@ -22,6 +22,12 @@ function buildCategorizationPrompt(analysis: ContentAnalysis): string {
     const { content, existingFolders, userCorrections } = analysis;
     let prompt = `Analyze this content and suggest the most appropriate category/folder name for organizing it.
 
+Rules:
+- Provide 1 primary category in "category".
+- Provide 3 to 4 concise alternative category names in "alternatives".
+- Alternatives must be strings, no punctuation at end, no duplicates, and must be plausible folder names.
+- Keep reasoning short (<= 200 chars).
+
 Content to categorize: "${content}"
 
 `;
@@ -96,6 +102,13 @@ export async function categorizeContent(analysis: ContentAnalysis) {
         console.log('[AI] candidates:', JSON.stringify(candidates, null, 2));
     }
     if (!responseText || responseText.trim().length === 0) {
+        // If response was truncated (MAX_TOKENS), try once more with a more concise prompt
+        if (String(finish) === 'MAX_TOKENS') {
+            const compact = `${analysis.content.slice(0, 1000)}\nReturn JSON: {category, confidence, reasoning, alternatives}`;
+            const retry = await model.generateContent([{ text: compact }]);
+            const txt = await retry.response.text();
+            if (txt && txt.trim().length > 0) return parseJsonResponse(txt);
+        }
         throw new Error(`Empty response from model. finishReason=${String(finish)} safety=${JSON.stringify(safety)}`);
     }
     // Strictly parse model output as JSON

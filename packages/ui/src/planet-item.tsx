@@ -16,9 +16,10 @@ interface PlanetItemProps {
   content: string;
   createdAt: Date;
   reasoning?: string | null;
+  alternatives?: string[];
 }
 
-export function PlanetItem({ id, content, createdAt, reasoning }: PlanetItemProps) {
+export function PlanetItem({ id, content, createdAt, reasoning, alternatives = [] }: PlanetItemProps) {
   const [copied, setCopied] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -27,6 +28,7 @@ export function PlanetItem({ id, content, createdAt, reasoning }: PlanetItemProp
   const [showInfo, setShowInfo] = useState(false);
   const infoRef = useRef<HTMLDivElement | null>(null);
   const [bubblePos, setBubblePos] = useState<{ x: number; y: number; align: "top" | "bottom" } | null>(null);
+  const [isAttaching, setIsAttaching] = useState<string | null>(null);
 
   useEffect(() => {
     function onDocClick(e: MouseEvent) {
@@ -39,6 +41,17 @@ export function PlanetItem({ id, content, createdAt, reasoning }: PlanetItemProp
     document.addEventListener('click', onDocClick);
     return () => document.removeEventListener('click', onDocClick);
   }, []);
+
+  // Broadcast when the info bubble opens/closes so parent cards can pause hover effects
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const evtName = showInfo ? 'planet-info-open' : 'planet-info-close';
+    window.dispatchEvent(new CustomEvent(evtName));
+    return () => {
+      // On unmount ensure we signal close
+      window.dispatchEvent(new CustomEvent('planet-info-close'));
+    };
+  }, [showInfo]);
 
   // Position the bubble relative to the viewport so it is never clipped
   useEffect(() => {
@@ -158,6 +171,27 @@ export function PlanetItem({ id, content, createdAt, reasoning }: PlanetItemProp
     }
   }
 
+  async function handleAttachToFolder(folderName: string) {
+    if (!folderName) return;
+    setIsAttaching(folderName);
+    try {
+      const res = await fetch('/api/dashboard', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'attachPlanetToFolder', planetId: id, folderName }),
+      });
+      if (!res.ok) throw new Error('Failed to attach');
+      // Close bubble and refresh to reflect the change
+      setShowInfo(false);
+      setBubblePos(null);
+      window.location.reload();
+    } catch (e) {
+      // keep bubble open but clear loading
+    } finally {
+      setIsAttaching(null);
+    }
+  }
+
   return (
     <div className={styles.planetRow}>
       <div className={styles.dot}></div>
@@ -248,20 +282,50 @@ export function PlanetItem({ id, content, createdAt, reasoning }: PlanetItemProp
           </button>
           {showInfo && bubblePos && typeof document !== 'undefined'
             ? ReactDOM.createPortal(
-                <div
-                  className={styles.infoBubble}
-                  role="dialog"
-                  aria-label="Context"
-                  style={{
-                    position: 'fixed',
-                    left: `${bubblePos.x}px`,
-                    ...(bubblePos.align === 'top' 
-                      ? { bottom: `${window.innerHeight - (infoRef.current?.getBoundingClientRect().top ?? 0) + 12}px` }
-                      : { top: `${(infoRef.current?.getBoundingClientRect().bottom ?? 0) + 12}px` }
-                    ),
-                  }}
-                >
-                  {reasoning ? reasoning : "no context"}
+                <div className={styles.infoOverlay} style={{ position: 'fixed', inset: 0, zIndex: 9998 }}>
+                  <div
+                    className={styles.infoBubble}
+                    role="dialog"
+                    aria-label="Context"
+                    onClick={(e) => e.stopPropagation()}
+                    style={{
+                      position: 'fixed',
+                      left: `${bubblePos.x}px`,
+                      ...(bubblePos.align === 'top' 
+                        ? { bottom: `${window.innerHeight - (infoRef.current?.getBoundingClientRect().top ?? 0) + 12}px` }
+                        : { top: `${(infoRef.current?.getBoundingClientRect().bottom ?? 0) + 12}px` }
+                      ),
+                    }}
+                  >
+                    <div className={styles.infoSection}>
+                    <div className={styles.infoSectionTitle}>Reasoning</div>
+                    <div className={styles.infoSectionBody}>
+                      {reasoning ? reasoning : "no context"}
+                    </div>
+                    </div>
+                    {alternatives && alternatives.length > 0 ? (
+                      <div className={styles.infoSection}>
+                        <div className={styles.infoSectionTitle}>Alternative names</div>
+                        <div className={styles.infoAltButtons}>
+                          {alternatives.slice(0, 10).map((alt, idx) => (
+                            <button
+                              key={idx}
+                              type="button"
+                              className={styles.altBtn}
+                              title={alt}
+                              disabled={isAttaching === alt}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleAttachToFolder(alt);
+                              }}
+                            >
+                              {isAttaching === alt ? 'Adding…' : alt}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
                 </div>,
                 document.body
               )

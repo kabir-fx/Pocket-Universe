@@ -165,10 +165,24 @@ export async function POST(req: NextRequest) {
           if (present('reasoning')) addParamCol('reasoning', aiResponse.reasoning ?? '');
           if (present('alternatives')) {
             const dt = get('alternatives')?.data_type ?? '';
+            const alts = Array.isArray(aiResponse.alternatives)
+              ? (aiResponse.alternatives as string[]).filter((x) => typeof x === 'string')
+              : [];
             if (dt.includes('ARRAY')) {
-              addLiteralCol('alternatives', "'{}'::text[]");
+              if (alts.length === 0) {
+                addLiteralCol('alternatives', "'{}'::text[]");
+              } else {
+                // Build ARRAY[$1,$2,...]::text[] using parameterized values to avoid injection
+                colNames.push('"alternatives"');
+                const arrPlaceholders: string[] = [];
+                for (const alt of alts) {
+                  arrPlaceholders.push(`$${param++}`);
+                  values.push(alt);
+                }
+                placeholders.push(`ARRAY[${arrPlaceholders.join(', ')}]::text[]`);
+              }
             } else {
-              addParamCol('alternatives', JSON.stringify(aiResponse.alternatives ?? []));
+              addParamCol('alternatives', JSON.stringify(alts));
             }
           }
           if (present('createdAt')) addLiteralCol('createdAt', 'NOW()');

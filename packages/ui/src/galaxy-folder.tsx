@@ -10,6 +10,7 @@ interface Planet {
   content: string;
   createdAt: Date;
   reasoning?: string | null;
+  alternatives?: string[];
 }
 
 interface GalaxyFolderProps {
@@ -44,6 +45,19 @@ export function GalaxyFolder({
     }
     return () => {
       if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
+    };
+  }, []);
+
+  // Pause tilt when any info bubble is open
+  const tiltPausedRef = useRef<boolean>(false);
+  useEffect(() => {
+    function onOpen() { tiltPausedRef.current = true; }
+    function onClose() { tiltPausedRef.current = false; }
+    window.addEventListener('planet-info-open', onOpen as EventListener);
+    window.addEventListener('planet-info-close', onClose as EventListener);
+    return () => {
+      window.removeEventListener('planet-info-open', onOpen as EventListener);
+      window.removeEventListener('planet-info-close', onClose as EventListener);
     };
   }, []);
 
@@ -109,7 +123,7 @@ export function GalaxyFolder({
   }
 
   function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
-    if (prefersReducedMotionRef.current) return;
+    if (prefersReducedMotionRef.current || tiltPausedRef.current) return;
     const el = cardRef.current;
     if (!el) return;
 
@@ -207,7 +221,8 @@ export function GalaxyFolder({
                 id={planet.id}
                 content={planet.content}
                 createdAt={planet.createdAt}
-                reasoning={planet.reasoning ?? null}
+              reasoning={planet.reasoning ?? null}
+              alternatives={planet.alternatives ?? []}
               />
             ))}
           </>

@@ -9,6 +9,8 @@ interface Planet {
   id: string;
   content: string;
   createdAt: Date;
+  reasoning?: string | null;
+  alternatives?: string[];
 }
 
 interface Galaxy {

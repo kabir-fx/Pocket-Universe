@@ -4,7 +4,7 @@ export const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
 export const getGeminiModel = () => {
     return genAI.getGenerativeModel({
-        model: 'gemini-2.0-flash-exp',
+        model: 'gemini-2.5-flash-lite',
         generationConfig: {
             temperature: 0.3,
             topK: 40,
@@ -22,7 +22,7 @@ export const getGeminiModel = () => {
                         items: { type: SchemaType.STRING }
                     }
                 },
-                required: ['category', 'confidence', 'reasoning']
+              required: ['category', 'confidence', 'reasoning', 'alternatives']
             }
         }
     });
