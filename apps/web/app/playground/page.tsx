@@ -122,21 +122,23 @@ function Homeer() {
         setErrorMsg(null);
         setSuccessMsg(null);
         try {
-          const res = await fetch('/api/ai/pipeline', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ content: planet })
+          const res = await fetch("/api/ai/pipeline", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ content: planet }),
           });
           const body = await res.json().catch(() => null);
           if (!res.ok) {
             if (res.status === 401) {
-              setErrorMsg('Please sign in to continue.');
+              setErrorMsg("Please sign in to continue.");
             } else {
-              setErrorMsg(body?.error || 'AI pipeline failed');
+              setErrorMsg(body?.error || "AI pipeline failed");
             }
             return;
           }
-          setSuccessMsg('Saved with AI! You can review it on your dashboard anytime.');
+          setSuccessMsg(
+            "Saved with AI! You can review it on your dashboard anytime.",
+          );
           // Refresh local folders list in case a new folder was created by AI
           await fetchGalaxies();
           if (onSuccess) onSuccess();

@@ -51,13 +51,17 @@ export function GalaxyFolder({
   // Pause tilt when any info bubble is open
   const tiltPausedRef = useRef<boolean>(false);
   useEffect(() => {
-    function onOpen() { tiltPausedRef.current = true; }
-    function onClose() { tiltPausedRef.current = false; }
-    window.addEventListener('planet-info-open', onOpen as EventListener);
-    window.addEventListener('planet-info-close', onClose as EventListener);
+    function onOpen() {
+      tiltPausedRef.current = true;
+    }
+    function onClose() {
+      tiltPausedRef.current = false;
+    }
+    window.addEventListener("planet-info-open", onOpen as EventListener);
+    window.addEventListener("planet-info-close", onClose as EventListener);
     return () => {
-      window.removeEventListener('planet-info-open', onOpen as EventListener);
-      window.removeEventListener('planet-info-close', onClose as EventListener);
+      window.removeEventListener("planet-info-open", onOpen as EventListener);
+      window.removeEventListener("planet-info-close", onClose as EventListener);
     };
   }, []);
 
@@ -221,8 +225,8 @@ export function GalaxyFolder({
                 id={planet.id}
                 content={planet.content}
                 createdAt={planet.createdAt}
-              reasoning={planet.reasoning ?? null}
-              alternatives={planet.alternatives ?? []}
+                reasoning={planet.reasoning ?? null}
+                alternatives={planet.alternatives ?? []}
               />
             ))}
           </>

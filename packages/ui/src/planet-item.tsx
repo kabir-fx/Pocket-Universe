@@ -19,7 +19,13 @@ interface PlanetItemProps {
   alternatives?: string[];
 }
 
-export function PlanetItem({ id, content, createdAt, reasoning, alternatives = [] }: PlanetItemProps) {
+export function PlanetItem({
+  id,
+  content,
+  createdAt,
+  reasoning,
+  alternatives = [],
+}: PlanetItemProps) {
   const [copied, setCopied] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -27,7 +33,11 @@ export function PlanetItem({ id, content, createdAt, reasoning, alternatives = [
   const [isUpdating, setIsUpdating] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
   const infoRef = useRef<HTMLDivElement | null>(null);
-  const [bubblePos, setBubblePos] = useState<{ x: number; y: number; align: "top" | "bottom" } | null>(null);
+  const [bubblePos, setBubblePos] = useState<{
+    x: number;
+    y: number;
+    align: "top" | "bottom";
+  } | null>(null);
   const [isAttaching, setIsAttaching] = useState<string | null>(null);
 
   useEffect(() => {
@@ -38,18 +48,18 @@ export function PlanetItem({ id, content, createdAt, reasoning, alternatives = [
         setBubblePos(null);
       }
     }
-    document.addEventListener('click', onDocClick);
-    return () => document.removeEventListener('click', onDocClick);
+    document.addEventListener("click", onDocClick);
+    return () => document.removeEventListener("click", onDocClick);
   }, []);
 
   // Broadcast when the info bubble opens/closes so parent cards can pause hover effects
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const evtName = showInfo ? 'planet-info-open' : 'planet-info-close';
+    if (typeof window === "undefined") return;
+    const evtName = showInfo ? "planet-info-open" : "planet-info-close";
     window.dispatchEvent(new CustomEvent(evtName));
     return () => {
       // On unmount ensure we signal close
-      window.dispatchEvent(new CustomEvent('planet-info-close'));
+      window.dispatchEvent(new CustomEvent("planet-info-close"));
     };
   }, [showInfo]);
 
@@ -66,12 +76,16 @@ export function PlanetItem({ id, content, createdAt, reasoning, alternatives = [
     const vh = window.innerHeight;
 
     // Horizontal placement: stick to right edge of button when possible
-    let x = Math.min(Math.max(rect.right - bubbleWidth, margin), vw - bubbleWidth - margin);
+    let x = Math.min(
+      Math.max(rect.right - bubbleWidth, margin),
+      vw - bubbleWidth - margin,
+    );
 
     // Vertical auto flip: prefer opening upward if there's enough space above
     const spaceAbove = rect.top;
     const spaceBelow = vh - rect.bottom;
-    const align: "top" | "bottom" = spaceAbove >= estimatedBubbleHeight + margin ? "top" : "bottom";
+    const align: "top" | "bottom" =
+      spaceAbove >= estimatedBubbleHeight + margin ? "top" : "bottom";
 
     setBubblePos({ x, y: 0, align }); // y is computed in style
   }, [showInfo]);
@@ -175,12 +189,16 @@ export function PlanetItem({ id, content, createdAt, reasoning, alternatives = [
     if (!folderName) return;
     setIsAttaching(folderName);
     try {
-      const res = await fetch('/api/dashboard', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'attachPlanetToFolder', planetId: id, folderName }),
+      const res = await fetch("/api/dashboard", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "attachPlanetToFolder",
+          planetId: id,
+          folderName,
+        }),
       });
-      if (!res.ok) throw new Error('Failed to attach');
+      if (!res.ok) throw new Error("Failed to attach");
       // Close bubble and refresh to reflect the change
       setShowInfo(false);
       setBubblePos(null);
@@ -280,32 +298,40 @@ export function PlanetItem({ id, content, createdAt, reasoning, alternatives = [
           >
             <InformationCircleIcon className={styles.infoIcon} />
           </button>
-          {showInfo && bubblePos && typeof document !== 'undefined'
+          {showInfo && bubblePos && typeof document !== "undefined"
             ? ReactDOM.createPortal(
-                <div className={styles.infoOverlay} style={{ position: 'fixed', inset: 0, zIndex: 9998 }}>
+                <div
+                  className={styles.infoOverlay}
+                  style={{ position: "fixed", inset: 0, zIndex: 9998 }}
+                >
                   <div
                     className={styles.infoBubble}
                     role="dialog"
                     aria-label="Context"
                     onClick={(e) => e.stopPropagation()}
                     style={{
-                      position: 'fixed',
+                      position: "fixed",
                       left: `${bubblePos.x}px`,
-                      ...(bubblePos.align === 'top' 
-                        ? { bottom: `${window.innerHeight - (infoRef.current?.getBoundingClientRect().top ?? 0) + 12}px` }
-                        : { top: `${(infoRef.current?.getBoundingClientRect().bottom ?? 0) + 12}px` }
-                      ),
+                      ...(bubblePos.align === "top"
+                        ? {
+                            bottom: `${window.innerHeight - (infoRef.current?.getBoundingClientRect().top ?? 0) + 12}px`,
+                          }
+                        : {
+                            top: `${(infoRef.current?.getBoundingClientRect().bottom ?? 0) + 12}px`,
+                          }),
                     }}
                   >
                     <div className={styles.infoSection}>
-                    <div className={styles.infoSectionTitle}>Reasoning</div>
-                    <div className={styles.infoSectionBody}>
-                      {reasoning ? reasoning : "no context"}
-                    </div>
+                      <div className={styles.infoSectionTitle}>Reasoning</div>
+                      <div className={styles.infoSectionBody}>
+                        {reasoning ? reasoning : "no context"}
+                      </div>
                     </div>
                     {alternatives && alternatives.length > 0 ? (
                       <div className={styles.infoSection}>
-                        <div className={styles.infoSectionTitle}>Alternative names</div>
+                        <div className={styles.infoSectionTitle}>
+                          Alternative names
+                        </div>
                         <div className={styles.infoAltButtons}>
                           {alternatives.slice(0, 10).map((alt, idx) => (
                             <button
@@ -319,7 +345,7 @@ export function PlanetItem({ id, content, createdAt, reasoning, alternatives = [
                                 handleAttachToFolder(alt);
                               }}
                             >
-                              {isAttaching === alt ? 'Adding…' : alt}
+                              {isAttaching === alt ? "Adding…" : alt}
                             </button>
                           ))}
                         </div>
@@ -327,7 +353,7 @@ export function PlanetItem({ id, content, createdAt, reasoning, alternatives = [
                     ) : null}
                   </div>
                 </div>,
-                document.body
+                document.body,
               )
             : null}
         </div>

@@ -49,32 +49,56 @@ export async function GET() {
   let contentToReason: Record<string, string> = {};
   let planetIdToAlternatives: Record<string, string[]> = {};
   let contentToAlternatives: Record<string, string[]> = {};
-  const normalize = (s: string) => s.trim().replace(/\s+/g, ' ').slice(0, 500);
+  const normalize = (s: string) => s.trim().replace(/\s+/g, " ").slice(0, 500);
   try {
     const anyPrisma: any = prisma as any;
     if (anyPrisma?.aICategorization?.findMany) {
       // Pull recent categorizations with planetId
       const rows = await anyPrisma.aICategorization.findMany({
         where: { userId: session.user.id },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         take: 200,
-        select: { planetId: true, contentPreview: true, reasoning: true, alternatives: true, suggestedFolder: true },
+        select: {
+          planetId: true,
+          contentPreview: true,
+          reasoning: true,
+          alternatives: true,
+          suggestedFolder: true,
+        },
       });
 
       const previewPairs = rows
-        .filter((r: any) => typeof r?.contentPreview === 'string' && typeof r?.reasoning === 'string')
-        .map((r: any) => ({ key: normalize(r.contentPreview as string), value: r.reasoning as string }));
+        .filter(
+          (r: any) =>
+            typeof r?.contentPreview === "string" &&
+            typeof r?.reasoning === "string",
+        )
+        .map((r: any) => ({
+          key: normalize(r.contentPreview as string),
+          value: r.reasoning as string,
+        }));
 
       const previewAltPairs = rows
-        .filter((r: any) => typeof r?.contentPreview === 'string' && Array.isArray(r?.alternatives))
-        .map((r: any) => ({ key: normalize(r.contentPreview as string), value: (r.alternatives as string[]).filter((x) => typeof x === 'string') }));
+        .filter(
+          (r: any) =>
+            typeof r?.contentPreview === "string" &&
+            Array.isArray(r?.alternatives),
+        )
+        .map((r: any) => ({
+          key: normalize(r.contentPreview as string),
+          value: (r.alternatives as string[]).filter(
+            (x) => typeof x === "string",
+          ),
+        }));
 
       for (const r of rows) {
-        if (r?.planetId && typeof r.reasoning === 'string') {
+        if (r?.planetId && typeof r.reasoning === "string") {
           planetIdToReason[r.planetId as string] = r.reasoning as string;
         }
         if (r?.planetId && Array.isArray(r?.alternatives)) {
-          planetIdToAlternatives[r.planetId as string] = (r.alternatives as string[]).filter((x) => typeof x === 'string');
+          planetIdToAlternatives[r.planetId as string] = (
+            r.alternatives as string[]
+          ).filter((x) => typeof x === "string");
         }
       }
 
@@ -84,7 +108,9 @@ export async function GET() {
         const exact = previewPairs.find((p: any) => p.key === key);
         if (exact) return exact.value;
         // Prefix/contains fallback (handles minor edits)
-        const contains = previewPairs.find((p: any) => key.startsWith(p.key) || p.key.startsWith(key));
+        const contains = previewPairs.find(
+          (p: any) => key.startsWith(p.key) || p.key.startsWith(key),
+        );
         return contains?.value;
       }
 
@@ -92,7 +118,9 @@ export async function GET() {
         const key = normalize(content);
         const exact = previewAltPairs.find((p: any) => p.key === key);
         if (exact) return exact.value;
-        const contains = previewAltPairs.find((p: any) => key.startsWith(p.key) || p.key.startsWith(key));
+        const contains = previewAltPairs.find(
+          (p: any) => key.startsWith(p.key) || p.key.startsWith(key),
+        );
         return contains?.value;
       }
 
@@ -100,39 +128,65 @@ export async function GET() {
       for (const g of galaxies) {
         for (const p of g.planets) {
           const r = planetIdToReason[p.id] ?? findReasonFor(p.content);
-          const a = planetIdToAlternatives[p.id] ?? findAlternativesFor(p.content);
+          const a =
+            planetIdToAlternatives[p.id] ?? findAlternativesFor(p.content);
           if (r) contentToReason[normalize(p.content)] = r;
           if (a && a.length) contentToAlternatives[normalize(p.content)] = a;
         }
       }
       for (const p of orphanedPlanets) {
         const r = planetIdToReason[p.id] ?? findReasonFor(p.content);
-        const a = planetIdToAlternatives[p.id] ?? findAlternativesFor(p.content);
+        const a =
+          planetIdToAlternatives[p.id] ?? findAlternativesFor(p.content);
         if (r) contentToReason[normalize(p.content)] = r;
         if (a && a.length) contentToAlternatives[normalize(p.content)] = a;
       }
     }
     // Fallback when Prisma client lacks AICategorization model: query via raw SQL
-    else if (typeof (prisma as any).$queryRawUnsafe === 'function') {
-      const rows: Array<{ planetId: string | null; contentPreview: string | null; reasoning: string | null; alternatives: string[] | null; userId: string } > = await (prisma as any).$queryRawUnsafe(
+    else if (typeof (prisma as any).$queryRawUnsafe === "function") {
+      const rows: Array<{
+        planetId: string | null;
+        contentPreview: string | null;
+        reasoning: string | null;
+        alternatives: string[] | null;
+        userId: string;
+      }> = await (prisma as any).$queryRawUnsafe(
         `select "planetId", "contentPreview", "reasoning", "alternatives", "userId" from "AICategorization" where "userId" = $1 order by "createdAt" desc limit 500`,
-        session.user.id
+        session.user.id,
       );
 
       const previewPairs = rows
-        .filter((r) => typeof r?.contentPreview === 'string' && typeof r?.reasoning === 'string')
-        .map((r) => ({ key: normalize(r.contentPreview as string), value: r.reasoning as string }));
+        .filter(
+          (r) =>
+            typeof r?.contentPreview === "string" &&
+            typeof r?.reasoning === "string",
+        )
+        .map((r) => ({
+          key: normalize(r.contentPreview as string),
+          value: r.reasoning as string,
+        }));
 
       const previewAltPairs = rows
-        .filter((r) => typeof r?.contentPreview === 'string' && Array.isArray(r?.alternatives))
-        .map((r) => ({ key: normalize(r.contentPreview as string), value: (r.alternatives as string[]).filter((x) => typeof x === 'string') }));
+        .filter(
+          (r) =>
+            typeof r?.contentPreview === "string" &&
+            Array.isArray(r?.alternatives),
+        )
+        .map((r) => ({
+          key: normalize(r.contentPreview as string),
+          value: (r.alternatives as string[]).filter(
+            (x) => typeof x === "string",
+          ),
+        }));
 
       for (const r of rows) {
-        if (r?.planetId && typeof r.reasoning === 'string') {
+        if (r?.planetId && typeof r.reasoning === "string") {
           planetIdToReason[r.planetId as string] = r.reasoning as string;
         }
         if (r?.planetId && Array.isArray(r?.alternatives)) {
-          planetIdToAlternatives[r.planetId as string] = (r.alternatives as string[]).filter((x) => typeof x === 'string');
+          planetIdToAlternatives[r.planetId as string] = (
+            r.alternatives as string[]
+          ).filter((x) => typeof x === "string");
         }
       }
 
@@ -140,7 +194,9 @@ export async function GET() {
         const key = normalize(content);
         const exact = previewPairs.find((p: any) => p.key === key);
         if (exact) return exact.value;
-        const contains = previewPairs.find((p: any) => key.startsWith(p.key) || p.key.startsWith(key));
+        const contains = previewPairs.find(
+          (p: any) => key.startsWith(p.key) || p.key.startsWith(key),
+        );
         return contains?.value;
       }
 
@@ -148,21 +204,25 @@ export async function GET() {
         const key = normalize(content);
         const exact = previewAltPairs.find((p: any) => p.key === key);
         if (exact) return exact.value;
-        const contains = previewAltPairs.find((p: any) => key.startsWith(p.key) || p.key.startsWith(key));
+        const contains = previewAltPairs.find(
+          (p: any) => key.startsWith(p.key) || p.key.startsWith(key),
+        );
         return contains?.value;
       }
 
       for (const g of galaxies) {
         for (const p of g.planets) {
           const r = planetIdToReason[p.id] ?? findReasonFor(p.content);
-          const a = planetIdToAlternatives[p.id] ?? findAlternativesFor(p.content);
+          const a =
+            planetIdToAlternatives[p.id] ?? findAlternativesFor(p.content);
           if (r) contentToReason[normalize(p.content)] = r;
           if (a && a.length) contentToAlternatives[normalize(p.content)] = a;
         }
       }
       for (const p of orphanedPlanets) {
         const r = planetIdToReason[p.id] ?? findReasonFor(p.content);
-        const a = planetIdToAlternatives[p.id] ?? findAlternativesFor(p.content);
+        const a =
+          planetIdToAlternatives[p.id] ?? findAlternativesFor(p.content);
         if (r) contentToReason[normalize(p.content)] = r;
         if (a && a.length) contentToAlternatives[normalize(p.content)] = a;
       }
@@ -176,14 +236,22 @@ export async function GET() {
     ...g,
     planets: g.planets.map((p) => ({
       ...p,
-      reasoning: planetIdToReason[p.id] ?? contentToReason[normalize(p.content)] ?? null,
-      alternatives: planetIdToAlternatives[p.id] ?? contentToAlternatives[normalize(p.content)] ?? [],
+      reasoning:
+        planetIdToReason[p.id] ?? contentToReason[normalize(p.content)] ?? null,
+      alternatives:
+        planetIdToAlternatives[p.id] ??
+        contentToAlternatives[normalize(p.content)] ??
+        [],
     })),
   }));
   const enrichedOrphaned = orphanedPlanets.map((p) => ({
     ...p,
-    reasoning: planetIdToReason[p.id] ?? contentToReason[normalize(p.content)] ?? null,
-    alternatives: planetIdToAlternatives[p.id] ?? contentToAlternatives[normalize(p.content)] ?? [],
+    reasoning:
+      planetIdToReason[p.id] ?? contentToReason[normalize(p.content)] ?? null,
+    alternatives:
+      planetIdToAlternatives[p.id] ??
+      contentToAlternatives[normalize(p.content)] ??
+      [],
   }));
 
   console.log("API - User ID:", session.user.id);
@@ -409,16 +477,19 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
     const action = body?.action;
-    if (action !== 'attachPlanetToFolder') {
+    if (action !== "attachPlanetToFolder") {
       return NextResponse.json({ error: "Invalid action" }, { status: 400 });
     }
 
     const planetId: string | undefined = body?.planetId;
     const rawFolderName: string | undefined = body?.folderName;
-    const folderName = (rawFolderName ?? '').toString().trim().slice(0, 80);
+    const folderName = (rawFolderName ?? "").toString().trim().slice(0, 80);
 
     if (!planetId || !folderName) {
-      return NextResponse.json({ error: "planetId and folderName are required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "planetId and folderName are required" },
+        { status: 400 },
+      );
     }
 
     // Verify planet belongs to user
@@ -442,7 +513,7 @@ export async function POST(req: NextRequest) {
           select: { id: true },
         });
       } catch (e: any) {
-        if (e?.code === 'P2002') {
+        if (e?.code === "P2002") {
           folder = await prisma.galaxy.findFirst({
             where: { userId: session.user.id, name: folderName },
             select: { id: true },
@@ -453,7 +524,10 @@ export async function POST(req: NextRequest) {
       }
     }
     if (!folder) {
-      return NextResponse.json({ error: "Folder resolution failed" }, { status: 500 });
+      return NextResponse.json(
+        { error: "Folder resolution failed" },
+        { status: 500 },
+      );
     }
 
     // Move planet: disconnect from all existing folders for this user, then connect to the selected folder
@@ -484,7 +558,9 @@ export async function POST(req: NextRequest) {
       });
 
       // Auto-delete any folders that became empty (excluding the target folder)
-      const candidateIds = existing.map((g) => g.id).filter((id) => id !== folder!.id);
+      const candidateIds = existing
+        .map((g) => g.id)
+        .filter((id) => id !== folder!.id);
       if (candidateIds.length > 0) {
         await tx.galaxy.deleteMany({
           where: {
@@ -498,7 +574,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ok: true, folderId: folder.id, moved: true });
   } catch (error) {
-    console.error('Dashboard POST error:', error);
+    console.error("Dashboard POST error:", error);
     return NextResponse.json({ error: "Request failed" }, { status: 500 });
   }
 }
