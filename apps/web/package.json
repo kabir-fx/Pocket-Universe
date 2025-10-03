@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
+    "@repo/ai": "workspace:*",
     "@repo/db": "workspace:*",
     "@repo/ui": "workspace:*",
     "bcryptjs": "^3.0.2",

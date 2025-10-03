@@ -44,19 +44,119 @@ export async function GET() {
     orderBy: { createdAt: "desc" },
   });
 
+  // Try to enrich planets with AI reasoning using planetId link first, fallback to content match
+  let planetIdToReason: Record<string, string> = {};
+  let contentToReason: Record<string, string> = {};
+  const normalize = (s: string) => s.trim().replace(/\s+/g, ' ').slice(0, 500);
+  try {
+    const anyPrisma: any = prisma as any;
+    if (anyPrisma?.aICategorization?.findMany) {
+      // Pull recent categorizations with planetId
+      const rows = await anyPrisma.aICategorization.findMany({
+        where: { userId: session.user.id },
+        orderBy: { createdAt: 'desc' },
+        take: 200,
+        select: { planetId: true, contentPreview: true, reasoning: true, suggestedFolder: true },
+      });
+
+      const previewPairs = rows
+        .filter((r: any) => typeof r?.contentPreview === 'string' && typeof r?.reasoning === 'string')
+        .map((r: any) => ({ key: normalize(r.contentPreview as string), value: r.reasoning as string }));
+
+      for (const r of rows) {
+        if (r?.planetId && typeof r.reasoning === 'string') {
+          planetIdToReason[r.planetId as string] = r.reasoning as string;
+        }
+      }
+
+      function findReasonFor(content: string): string | undefined {
+        const key = normalize(content);
+        // Exact match first
+        const exact = previewPairs.find((p: any) => p.key === key);
+        if (exact) return exact.value;
+        // Prefix/contains fallback (handles minor edits)
+        const contains = previewPairs.find((p: any) => key.startsWith(p.key) || p.key.startsWith(key));
+        return contains?.value;
+      }
+
+      // Build map for quick lookups
+      for (const g of galaxies) {
+        for (const p of g.planets) {
+          const r = planetIdToReason[p.id] ?? findReasonFor(p.content);
+          if (r) contentToReason[normalize(p.content)] = r;
+        }
+      }
+      for (const p of orphanedPlanets) {
+        const r = planetIdToReason[p.id] ?? findReasonFor(p.content);
+        if (r) contentToReason[normalize(p.content)] = r;
+      }
+    }
+    // Fallback when Prisma client lacks AICategorization model: query via raw SQL
+    else if (typeof (prisma as any).$queryRawUnsafe === 'function') {
+      const rows: Array<{ planetId: string | null; contentPreview: string | null; reasoning: string | null; userId: string } > = await (prisma as any).$queryRawUnsafe(
+        `select "planetId", "contentPreview", "reasoning", "userId" from "AICategorization" where "userId" = $1 order by "createdAt" desc limit 500`,
+        session.user.id
+      );
+
+      const previewPairs = rows
+        .filter((r) => typeof r?.contentPreview === 'string' && typeof r?.reasoning === 'string')
+        .map((r) => ({ key: normalize(r.contentPreview as string), value: r.reasoning as string }));
+
+      for (const r of rows) {
+        if (r?.planetId && typeof r.reasoning === 'string') {
+          planetIdToReason[r.planetId as string] = r.reasoning as string;
+        }
+      }
+
+      function findReasonFor(content: string): string | undefined {
+        const key = normalize(content);
+        const exact = previewPairs.find((p: any) => p.key === key);
+        if (exact) return exact.value;
+        const contains = previewPairs.find((p: any) => key.startsWith(p.key) || p.key.startsWith(key));
+        return contains?.value;
+      }
+
+      for (const g of galaxies) {
+        for (const p of g.planets) {
+          const r = planetIdToReason[p.id] ?? findReasonFor(p.content);
+          if (r) contentToReason[normalize(p.content)] = r;
+        }
+      }
+      for (const p of orphanedPlanets) {
+        const r = planetIdToReason[p.id] ?? findReasonFor(p.content);
+        if (r) contentToReason[normalize(p.content)] = r;
+      }
+    }
+  } catch {
+    // If the table or client isn't available, skip enrichment silently
+  }
+
+  // Enrich with reasoning if available
+  const enrichedGalaxies = galaxies.map((g) => ({
+    ...g,
+    planets: g.planets.map((p) => ({
+      ...p,
+      reasoning: planetIdToReason[p.id] ?? contentToReason[normalize(p.content)] ?? null,
+    })),
+  }));
+  const enrichedOrphaned = orphanedPlanets.map((p) => ({
+    ...p,
+    reasoning: planetIdToReason[p.id] ?? contentToReason[normalize(p.content)] ?? null,
+  }));
+
   console.log("API - User ID:", session.user.id);
   console.log("API - Real galaxies found:", galaxies.length);
   console.log("API - Orphaned planets found:", orphanedPlanets.length);
 
   // Always show virtual galaxy for adding new folder names
-  const result: any[] = [...galaxies];
+  const result: any[] = [...enrichedGalaxies];
 
   // ALWAYS add virtual galaxy to allow creating new folders
   result.push({
     id: "orphaned-planets", // Virtual ID
     name: "Orphaned Planets",
-    planets: orphanedPlanets.length > 0 ? orphanedPlanets : [],
-    _count: { planets: orphanedPlanets.length },
+    planets: enrichedOrphaned.length > 0 ? enrichedOrphaned : [],
+    _count: { planets: enrichedOrphaned.length },
     isVirtual: true,
   });
 

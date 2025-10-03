@@ -24,6 +24,10 @@ export interface PlgCardProps {
     planet: string;
     onSuccess?: () => void;
   }) => Promise<void> | void;
+  onAiSubmit?: (args: {
+    planet: string;
+    onSuccess?: () => void;
+  }) => Promise<void> | void;
 }
 
 export function PlgCard({
@@ -37,6 +41,7 @@ export function PlgCard({
   cardBackgroundColor,
   showShadows = true,
   onSubmit,
+  onAiSubmit,
 }: PlgCardProps) {
   const [galaxy, setGalaxy] = useState("");
   const [planet, setPlanet] = useState("");
@@ -53,6 +58,15 @@ export function PlgCard({
     e.preventDefault();
     await onSubmit({
       galaxy: galaxy || undefined,
+      planet,
+      onSuccess: clearForm,
+    });
+  }
+
+  async function handleAiClick() {
+    if (!onAiSubmit) return;
+    if (!planet) return;
+    await onAiSubmit({
       planet,
       onSuccess: clearForm,
     });
@@ -184,6 +198,19 @@ export function PlgCard({
               onChange={(e) => setPlanet(e.target.value)}
               required
             />
+            {onAiSubmit ? (
+              <button
+                type="button"
+                disabled={submitting}
+                className={styles.createButton}
+                data-submitting={submitting}
+                onClick={handleAiClick}
+                aria-label="Save with AI"
+                title="Save with AI"
+              >
+                Save with AI
+              </button>
+            ) : null}
             <button
               type="submit"
               disabled={submitting}

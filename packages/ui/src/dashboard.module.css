@@ -300,12 +300,57 @@
   border-radius: 8px;
   padding: 4px 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  z-index: 40;
 }
 
-.planetTime {
+.planetInfoWrap {
   color: #6b7280;
-  font-size: 12px;
-  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  position: relative;
+  /* Create a new stacking context so the bubble can layer above siblings */
+  z-index: 50;
+}
+
+.infoIcon {
+  width: 16px;
+  height: 16px;
+}
+
+.infoBubble {
+  min-width: 220px;
+  max-width: 420px;
+  max-height: 60vh;
+  padding: 12px 14px;
+  background: #111827;
+  color: #f9fafb;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.6;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.28);
+  z-index: 9999;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  overflow-y: auto;
+  white-space: normal;
+}
+
+.infoBubble::-webkit-scrollbar {
+  width: 6px;
+}
+
+.infoBubble::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.infoBubble::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+}
+
+.infoBubble::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
 }
 
 /* Copy button */
@@ -580,6 +625,7 @@
     background-image:
       radial-gradient(120% 80% at 50% -20%, rgba(255,255,255,0.08), transparent 60%),
       linear-gradient(180deg, rgba(255,255,255,0.04), transparent 30%);
+    overflow: hidden;
   }
 
   .card::after {
@@ -653,8 +699,14 @@
     color: #e5e7eb;
   }
 
-  .planetTime {
+  .planetInfoWrap {
     color: #9ca3af;
+  }
+
+  .infoBubble {
+    background: #111827;
+    color: #e5e7eb;
+    border: 1px solid rgba(255, 255, 255, 0.1);
   }
 
   .copyBtn {

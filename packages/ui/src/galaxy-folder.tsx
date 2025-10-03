@@ -9,6 +9,7 @@ interface Planet {
   id: string;
   content: string;
   createdAt: Date;
+  reasoning?: string | null;
 }
 
 interface GalaxyFolderProps {
@@ -206,6 +207,7 @@ export function GalaxyFolder({
                 id={planet.id}
                 content={planet.content}
                 createdAt={planet.createdAt}
+                reasoning={planet.reasoning ?? null}
               />
             ))}
           </>

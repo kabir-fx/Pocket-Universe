@@ -28,6 +28,8 @@ model User {
   galaxies Galaxy[]
   planets  Planet[]
 
+  aiSlop  AICategorization[]
+
   createdAt DateTime @default(now())
 }
 
@@ -69,13 +71,16 @@ model VerificationToken {
 
 model Galaxy {
   id        String   @id @default(cuid())
-  name      String   @unique
+  name      String
   user      User     @relation(fields: [userId], references: [id])
   userId    String
   planets   Planet[]
+  aiCategorizations AICategorization[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   shareable Boolean
+
+  @@unique([userId, name])
 }
 
 model Planet {
@@ -84,6 +89,26 @@ model Planet {
   user      User     @relation(fields: [userId], references: [id])
   userId    String
   galaxies  Galaxy[]
+  aiCategorizations AICategorization[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model AICategorization {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+  planetId        String?
+  planet          Planet?  @relation(fields: [planetId], references: [id])
+  folderId        String?
+  folder          Galaxy?  @relation(fields: [folderId], references: [id])
+  contentPreview  String   // first ~500-1000 chars, not full blob
+  suggestedFolder String
+  acceptedFolder  String?  // set when user accepts/overrides
+  confidence      Float
+  reasoning       String?
+  alternatives    String[]
+  createdAt       DateTime @default(now())
+
+  @@index([userId, createdAt])
 }

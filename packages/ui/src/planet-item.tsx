@@ -1,27 +1,67 @@
 "use client";
 
-import { formatDistanceToNow } from "date-fns";
 import {
   ClipboardIcon,
   CheckIcon,
   TrashIcon,
   PencilIcon,
+  InformationCircleIcon,
 } from "@heroicons/react/24/outline";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import ReactDOM from "react-dom";
 import styles from "./dashboard.module.css";
 
 interface PlanetItemProps {
   id: string;
   content: string;
   createdAt: Date;
+  reasoning?: string | null;
 }
 
-export function PlanetItem({ id, content, createdAt }: PlanetItemProps) {
+export function PlanetItem({ id, content, createdAt, reasoning }: PlanetItemProps) {
   const [copied, setCopied] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(content);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [showInfo, setShowInfo] = useState(false);
+  const infoRef = useRef<HTMLDivElement | null>(null);
+  const [bubblePos, setBubblePos] = useState<{ x: number; y: number; align: "top" | "bottom" } | null>(null);
+
+  useEffect(() => {
+    function onDocClick(e: MouseEvent) {
+      if (!infoRef.current) return;
+      if (!infoRef.current.contains(e.target as Node)) {
+        setShowInfo(false);
+        setBubblePos(null);
+      }
+    }
+    document.addEventListener('click', onDocClick);
+    return () => document.removeEventListener('click', onDocClick);
+  }, []);
+
+  // Position the bubble relative to the viewport so it is never clipped
+  useEffect(() => {
+    if (!showInfo) return;
+    const btn = infoRef.current;
+    if (!btn) return;
+    const rect = btn.getBoundingClientRect();
+    const bubbleWidth = 360; // approx max width
+    const estimatedBubbleHeight = 200; // heuristic for placement decision
+    const margin = 12;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+
+    // Horizontal placement: stick to right edge of button when possible
+    let x = Math.min(Math.max(rect.right - bubbleWidth, margin), vw - bubbleWidth - margin);
+
+    // Vertical auto flip: prefer opening upward if there's enough space above
+    const spaceAbove = rect.top;
+    const spaceBelow = vh - rect.bottom;
+    const align: "top" | "bottom" = spaceAbove >= estimatedBubbleHeight + margin ? "top" : "bottom";
+
+    setBubblePos({ x, y: 0, align }); // y is computed in style
+  }, [showInfo]);
 
   async function handleCopy() {
     try {
@@ -194,8 +234,38 @@ export function PlanetItem({ id, content, createdAt }: PlanetItemProps) {
             </button>
           </>
         )}
-        <div className={styles.planetTime}>
-          {formatDistanceToNow(new Date(createdAt), { addSuffix: true })}
+        <div className={styles.planetInfoWrap} ref={infoRef}>
+          <button
+            className={styles.copyBtn}
+            aria-label="Show context"
+            title={reasoning ? "Show context" : "no context"}
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowInfo((v) => !v);
+            }}
+          >
+            <InformationCircleIcon className={styles.infoIcon} />
+          </button>
+          {showInfo && bubblePos && typeof document !== 'undefined'
+            ? ReactDOM.createPortal(
+                <div
+                  className={styles.infoBubble}
+                  role="dialog"
+                  aria-label="Context"
+                  style={{
+                    position: 'fixed',
+                    left: `${bubblePos.x}px`,
+                    ...(bubblePos.align === 'top' 
+                      ? { bottom: `${window.innerHeight - (infoRef.current?.getBoundingClientRect().top ?? 0) + 12}px` }
+                      : { top: `${(infoRef.current?.getBoundingClientRect().bottom ?? 0) + 12}px` }
+                    ),
+                  }}
+                >
+                  {reasoning ? reasoning : "no context"}
+                </div>,
+                document.body
+              )
+            : null}
         </div>
       </div>
     </div>

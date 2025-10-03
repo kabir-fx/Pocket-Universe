@@ -11,7 +11,7 @@ import brcypt from "bcryptjs";
 import { CredentialsSchema } from "../zodValidation/auth";
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma) as Adapter,
+  adapter: PrismaAdapter(prisma as any) as Adapter,
   pages: {
     signIn: "/auth/signin",
   },
