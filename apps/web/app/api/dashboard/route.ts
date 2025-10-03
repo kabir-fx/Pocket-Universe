@@ -254,8 +254,6 @@ export async function GET() {
       [],
   }));
 
-  console.log("API - User ID:", session.user.id);
-
   // Always show virtual galaxy for adding new folder names
   const result: any[] = [...enrichedGalaxies];
 
@@ -267,8 +265,6 @@ export async function GET() {
     _count: { planets: enrichedOrphaned.length },
     isVirtual: true,
   });
-
-  console.log("API - Total Folders returned:", result.length);
 
   return NextResponse.json(result);
 }

@@ -44,11 +44,79 @@ export async function POST(req: NextRequest) {
       take: 100,
     });
 
+    // Collect recent user corrections (suggested vs accepted) to guide the model
+    let userCorrections:
+      | Array<{
+          originalContent: string;
+          suggestedFolder: string;
+          acceptedFolder: string;
+        }>
+      | undefined = undefined;
+    try {
+      const anyPrisma: any = prisma as any;
+      const normalize = (s: string) =>
+        s.trim().replace(/\s+/g, " ").slice(0, 500);
+
+      if (anyPrisma?.aICategorization?.findMany) {
+        const rows = await anyPrisma.aICategorization.findMany({
+          where: { userId, acceptedFolder: { not: null } },
+          orderBy: { createdAt: "desc" },
+          take: 50,
+          select: {
+            contentPreview: true,
+            suggestedFolder: true,
+            acceptedFolder: true,
+          },
+        });
+        const mapped = (rows as Array<any>)
+          .filter(
+            (r) =>
+              typeof r?.contentPreview === "string" &&
+              typeof r?.suggestedFolder === "string" &&
+              typeof r?.acceptedFolder === "string",
+          )
+          // Only include actual user overrides (accepted differs from suggested)
+          .filter((r) => r.acceptedFolder !== r.suggestedFolder)
+          .map((r) => ({
+            originalContent: normalize(r.contentPreview as string),
+            suggestedFolder: r.suggestedFolder as string,
+            acceptedFolder: r.acceptedFolder as string,
+          }));
+        if (mapped.length > 0) userCorrections = mapped;
+      } else if (typeof (prisma as any).$queryRawUnsafe === "function") {
+        const rows: Array<{
+          contentPreview: string | null;
+          suggestedFolder: string | null;
+          acceptedFolder: string | null;
+        }> = await (prisma as any).$queryRawUnsafe(
+          `select "contentPreview", "suggestedFolder", "acceptedFolder" from "AICategorization" where "userId" = $1 and "acceptedFolder" is not null order by "createdAt" desc limit 50`,
+          userId,
+        );
+        const mapped = rows
+          .filter(
+            (r) =>
+              typeof r?.contentPreview === "string" &&
+              typeof r?.suggestedFolder === "string" &&
+              typeof r?.acceptedFolder === "string",
+          )
+          .filter((r) => r.acceptedFolder !== r.suggestedFolder)
+          .map((r) => ({
+            originalContent: normalize(r.contentPreview as string),
+            suggestedFolder: r.suggestedFolder as string,
+            acceptedFolder: r.acceptedFolder as string,
+          }));
+        if (mapped.length > 0) userCorrections = mapped;
+      }
+    } catch {
+      // Silently ignore if table is missing or query fails
+    }
+
     const aiResponse = await categorizeContent({
       content,
       userId,
       existingFolders: userFolders.map((f) => f.name),
-      userCorrections: [],
+      // Only include userCorrections if we have any meaningful overrides
+      userCorrections: userCorrections,
     });
 
     // Find or create target folder

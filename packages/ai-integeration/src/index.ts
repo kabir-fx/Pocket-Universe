@@ -41,7 +41,7 @@ Content to categorize: "${content}"
 ${userCorrections
   .map(
     (c) =>
-      `"${c.originalContent.substring(0, 50)}..." → suggested: "${c.suggestedFolder}" → user chose: "${c.acceptedFolder}"`,
+      `For this content: "${c.originalContent.substring(0, 50)}..." → suggested: "${c.suggestedFolder}" → user chose: "${c.acceptedFolder}"`,
   )
   .join("\n")}
 
@@ -101,6 +101,8 @@ function parseJsonResponse(text: string): CategorizationResult {
 export async function categorizeContent(analysis: ContentAnalysis) {
   const model = getGeminiModel();
   const prompt = buildCategorizationPrompt(analysis);
+
+  console.log("Prompt: " + prompt);
 
   // Use content parts per official SDK docs to avoid accidental formatting issues
   const result = await model.generateContent([{ text: prompt }]);
