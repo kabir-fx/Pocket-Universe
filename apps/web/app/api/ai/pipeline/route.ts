@@ -126,6 +126,7 @@ export async function POST(req: NextRequest) {
             suggestedFolder: aiResponse.suggestedFolder,
             acceptedFolder: aiResponse.suggestedFolder,
             createdAt: new Date(),
+            folderId: folder.id,
           },
         });
         reviewId = review?.id;

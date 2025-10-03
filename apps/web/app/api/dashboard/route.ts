@@ -255,8 +255,6 @@ export async function GET() {
   }));
 
   console.log("API - User ID:", session.user.id);
-  console.log("API - Real galaxies found:", galaxies.length);
-  console.log("API - Orphaned planets found:", orphanedPlanets.length);
 
   // Always show virtual galaxy for adding new folder names
   const result: any[] = [...enrichedGalaxies];
@@ -557,18 +555,43 @@ export async function POST(req: NextRequest) {
         data: { galaxies: { connect: { id: folder.id } } },
       });
 
+      // Update acceptedFolder in AI categorization records for this planet
+      // Using raw SQL because Prisma client may not have the model properly typed
+      try {
+        const updateResult = await tx.$executeRawUnsafe(
+          `UPDATE "AICategorization" SET "acceptedFolder" = $1 WHERE "planetId" = $2 AND "userId" = $3`,
+          folderName,
+          planetId,
+          session.user.id,
+        );
+        console.log(
+          `[AI] Updated ${updateResult} AICategorization record(s) for planet ${planetId} to acceptedFolder="${folderName}"`,
+        );
+      } catch (aiUpdateError: any) {
+        // If table doesn't exist yet, that's okay
+        console.warn(
+          "Could not update AICategorization.acceptedFolder:",
+          aiUpdateError?.message,
+        );
+      }
+
       // Auto-delete any folders that became empty (excluding the target folder)
       const candidateIds = existing
         .map((g) => g.id)
         .filter((id) => id !== folder!.id);
       if (candidateIds.length > 0) {
-        await tx.galaxy.deleteMany({
+        const deletedCount = await tx.galaxy.deleteMany({
           where: {
             userId: session.user.id,
             id: { in: candidateIds },
             planets: { none: {} },
           },
         });
+        if (deletedCount.count > 0) {
+          console.log(
+            `[Cleanup] Auto-deleted ${deletedCount.count} empty folder(s)`,
+          );
+        }
       }
     });
 
