@@ -41,6 +41,8 @@ export function GalaxyFolder({
   const [showEditIcon, setShowEditIcon] = useState(false);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const copyTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined" && "matchMedia" in window) {
@@ -52,6 +54,18 @@ export function GalaxyFolder({
       if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    return () => {
+      if (copyTimerRef.current) window.clearTimeout(copyTimerRef.current);
+    };
+  }, []);
+
+  function markCopied(id: string) {
+    if (copyTimerRef.current) window.clearTimeout(copyTimerRef.current);
+    setCopiedId(id);
+    copyTimerRef.current = window.setTimeout(() => setCopiedId(null), 1000);
+  }
 
   // Close lightbox on ESC
   useEffect(() => {
@@ -273,6 +287,96 @@ export function GalaxyFolder({
                   disabled={deletingId === img.id}
                 >
                   ×
+                </button>
+                <button
+                  className={`${styles.imageCopyBtn} ${copiedId === img.id ? styles.imageCopyBtnOk : ""}`}
+                  title="Copy image to clipboard"
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    try {
+                      if (!img.signedUrl) {
+                        alert("No image URL available to copy");
+                        return;
+                      }
+                      const res = await fetch(img.signedUrl, { cache: "no-store" });
+                      if (!res.ok) throw new Error("Failed to fetch image");
+                      let blob = await res.blob();
+                      const origMime = blob.type || img.contentType || "image/png";
+
+                      const canWrite = Boolean((navigator as any)?.clipboard && (navigator.clipboard as any).write && (window as any).ClipboardItem);
+                      const supportsType = (type: string) => {
+                        const CI: any = (window as any).ClipboardItem;
+                        return typeof CI?.supports === "function" ? CI.supports(type) : (type === "image/png");
+                      };
+
+                      if (canWrite) {
+                        try {
+                          if (supportsType(origMime)) {
+                            const item = new (window as any).ClipboardItem({ [origMime]: blob });
+                            await (navigator.clipboard as any).write([item]);
+                            markCopied(img.id);
+                            return;
+                          }
+                        } catch {}
+
+                        // Convert to PNG if original type isn't supported for clipboard write (e.g., image/jpeg)
+                        if (supportsType("image/png")) {
+                          try {
+                            const pngBlob = await (async () => {
+                              const url = URL.createObjectURL(blob);
+                              try {
+                                const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+                                  const im = new Image();
+                                  im.onload = () => resolve(im);
+                                  im.onerror = reject as any;
+                                  im.crossOrigin = "anonymous";
+                                  im.src = url;
+                                });
+                                const canvas = document.createElement("canvas");
+                                canvas.width = image.naturalWidth || image.width;
+                                canvas.height = image.naturalHeight || image.height;
+                                const ctx = canvas.getContext("2d");
+                                if (!ctx) throw new Error("Canvas 2D not available");
+                                ctx.drawImage(image, 0, 0);
+                                return await new Promise<Blob>((resolve, reject) =>
+                                  canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("toBlob failed"))), "image/png")
+                                );
+                              } finally {
+                                URL.revokeObjectURL(url);
+                              }
+                            })();
+                            const item = new (window as any).ClipboardItem({ ["image/png"]: pngBlob });
+                            await (navigator.clipboard as any).write([item]);
+                            markCopied(img.id);
+                            return;
+                          } catch (err) {
+                            console.warn("PNG fallback failed, copying URL instead", err);
+                          }
+                        }
+
+                        // Final fallback: copy URL as text
+                        await navigator.clipboard.writeText(img.signedUrl);
+                        markCopied(img.id);
+                        return;
+                      }
+
+                      // If programmatic image write is unavailable, fallback to copying URL
+                      await navigator.clipboard.writeText(img.signedUrl);
+                      markCopied(img.id);
+                    } catch (err) {
+                      console.error("Copy image failed:", err);
+                      try {
+                        if (img.signedUrl) {
+                          await navigator.clipboard.writeText(img.signedUrl);
+                          markCopied(img.id);
+                        } else {
+                          alert("Failed to copy image");
+                        }
+                      } catch {}
+                    }
+                  }}
+                >
+                  {copiedId === img.id ? "✓" : "⧉"}
                 </button>
               </div>
             ))}

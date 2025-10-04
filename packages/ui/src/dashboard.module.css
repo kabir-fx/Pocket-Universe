@@ -275,6 +275,43 @@
   cursor: zoom-in;
 }
 
+.imageCopyBtn {
+  position: absolute;
+  top: 36px;
+  right: 6px;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(0,0,0,0.55);
+  color: #fff;
+  font-weight: 700;
+  line-height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all .18s ease;
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
+.imageItem:hover .imageCopyBtn {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.imageCopyBtn:hover {
+  background: rgba(59,130,246,0.9);
+  border-color: rgba(59,130,246,0.9);
+}
+
+.imageCopyBtnOk {
+  background: rgba(16,185,129,0.92) !important; /* green */
+  border-color: rgba(16,185,129,0.92) !important;
+  color: #fff !important;
+}
+
 .imageDeleting {
   opacity: .5;
   filter: grayscale(1);
