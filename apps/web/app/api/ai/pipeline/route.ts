@@ -1,4 +1,4 @@
-import { categorizeContent } from "@repo/ai";
+import { categorizeContent, categorizeImage, bufferToBase64 } from "@repo/ai";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../../../lib/nextAuth/auth";
 import prisma from "@repo/db/prisma";
@@ -7,7 +7,9 @@ import { randomUUID } from "crypto";
 import { z } from "zod";
 
 const BodySchema = z.object({
-  content: z.string().min(3).max(50_000),
+  type: z.enum(["text", "image"]).optional(),
+  data: z.any().optional(),
+  content: z.string().min(3).max(50_000).optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -35,7 +37,12 @@ export async function POST(req: NextRequest) {
     }
 
     const userId = session.user.id;
-    const content = parse.data.content.trim().slice(0, 4000);
+    const body = parse.data;
+    const isLegacyText = typeof body.content === "string" && (!body.type || body.type === "text");
+    const reqType = (body.type ?? (isLegacyText ? "text" : undefined)) as "text" | "image" | undefined;
+    if (!reqType) {
+      return NextResponse.json({ error: "Missing type for request" }, { status: 400 });
+    }
 
     // Get user's existing galaxies for context
     const userFolders = await prisma.galaxy.findMany({
@@ -111,24 +118,83 @@ export async function POST(req: NextRequest) {
       // Silently ignore if table is missing or query fails
     }
 
-    const aiResponse = await categorizeContent({
-      content,
-      userId,
-      existingFolders: userFolders.map((f) => f.name),
-      // Only include userCorrections if we have any meaningful overrides
-      userCorrections: userCorrections,
-    });
+    let aiResponse:
+      | { suggestedFolder: string; confidence?: number; reasoning?: string; alternatives?: string[] }
+      | null = null;
+
+    let textContent: string | null = null;
+    if (reqType === "text") {
+      const raw = isLegacyText
+        ? (body.content as string)
+        : (typeof body.data?.content === "string" ? (body.data.content as string) : "");
+      const contentTrimmed = raw.trim().slice(0, 4000);
+      if (!contentTrimmed) return NextResponse.json({ error: "Missing text content" }, { status: 400 });
+      textContent = contentTrimmed;
+      aiResponse = await categorizeContent({
+        content: contentTrimmed,
+        userId,
+        existingFolders: userFolders.map((f) => f.name),
+        userCorrections: userCorrections,
+      });
+    } else {
+      const img = body.data;
+      let buf: Buffer | null = null;
+      let mime: string = "";
+      if (typeof img?.dataUrl === "string" && img.dataUrl.startsWith("data:")) {
+        const match = img.dataUrl.match(/^data:(.*?);base64,(.*)$/);
+        if (!match) return NextResponse.json({ error: "Invalid dataUrl" }, { status: 400 });
+        const [, ct, b64] = match;
+        mime = img.mimeType || ct;
+        buf = Buffer.from(b64, "base64");
+      } else if (typeof img?.base64 === "string" && img.base64) {
+        mime = img.mimeType || img.contentType || "";
+        buf = Buffer.from(img.base64, "base64");
+      } else if (typeof img?.url === "string" && img.url) {
+        try {
+          const u = new URL(img.url);
+          const resFetch = await fetch(u.toString(), { method: "GET", cache: "no-store" });
+          if (!resFetch.ok) return NextResponse.json({ error: `Failed to fetch image URL (${resFetch.status})` }, { status: 400 });
+          const ab = await resFetch.arrayBuffer();
+          buf = Buffer.from(ab);
+          mime = resFetch.headers.get("content-type") || img.mimeType || img.contentType || "";
+        } catch (e: any) {
+          return NextResponse.json({ error: e?.message || "Failed to fetch image URL" }, { status: 400 });
+        }
+      } else {
+        return NextResponse.json({ error: "Missing image payload: expected base64, dataUrl, or url" }, { status: 400 });
+      }
+
+      if (!mime) return NextResponse.json({ error: "Unknown image mimeType" }, { status: 415 });
+      const allowed = new Set(["image/jpeg", "image/png", "image/webp"]);
+      const normalized = mime === "image/jpg" ? "image/jpeg" : mime;
+      if (!allowed.has(normalized)) return NextResponse.json({ error: "Unsupported image type" }, { status: 415 });
+
+      const imageBase64 = bufferToBase64(buf as Buffer);
+      aiResponse = await categorizeImage({
+        imageBase64,
+        mimeType: normalized,
+        userId,
+        existingFolders: userFolders.map((f) => f.name),
+        userCorrections: userCorrections,
+        filename: typeof img?.filename === "string" ? img.filename : undefined,
+      });
+    }
+
+    // Validate AI response
+    if (!aiResponse || !aiResponse.suggestedFolder) {
+      return NextResponse.json({ error: "AI did not return a folder" }, { status: 502 });
+    }
 
     // Find or create target folder
     let folder = await prisma.galaxy.findFirst({
-      where: { userId, name: aiResponse.suggestedFolder },
+      where: { userId, name: aiResponse!.suggestedFolder },
     });
     if (!folder) {
       try {
         folder = await prisma.galaxy.create({
           data: {
             userId: userId,
-            name: aiResponse.suggestedFolder,
+            name: aiResponse!.suggestedFolder,
             shareable: false,
           },
         });
@@ -136,9 +202,10 @@ export async function POST(req: NextRequest) {
         // Handle unique constraint race: re-query existing
         const code = e?.code || e?.meta?.code;
         if (code === "P2002") {
-          folder = await prisma.galaxy.findFirst({
-            where: { userId, name: aiResponse.suggestedFolder },
+          const f2 = await prisma.galaxy.findFirst({
+            where: { userId, name: aiResponse!.suggestedFolder },
           });
+          folder = f2 ?? folder;
         } else {
           throw e;
         }
@@ -148,33 +215,35 @@ export async function POST(req: NextRequest) {
       throw new Error("Folder resolution failed");
     }
 
-    const planet = await prisma.planet.create({
-      data: {
-        content,
-        userId,
-        galaxies: {
-          connect: { id: folder.id },
-        },
-      },
-    });
+    const planet = (reqType === "text")
+      ? await prisma.planet.create({
+          data: {
+            content: textContent!,
+            userId,
+            galaxies: { connect: { id: folder.id } },
+          },
+        })
+      : null;
 
     // Persist AI review row with fallbacks
     let reviewId: string | undefined = undefined;
     let aiCategorizationSaved = false;
     try {
-      const normalized = content.trim().replace(/\s+/g, " ").slice(0, 500);
+      const normalized = (reqType === "text")
+        ? textContent!.replace(/\s+/g, " ").slice(0, 500)
+        : `[image] ${new Date().toISOString()}`;
       const review = await (prisma as any).aICategorization.create({
         data: {
           id: randomUUID(),
           userId,
-          planetId: planet.id,
+          ...(planet?.id ? { planetId: planet.id } : {}),
           folderId: folder.id,
           contentPreview: normalized,
-          suggestedFolder: aiResponse.suggestedFolder,
-          acceptedFolder: aiResponse.suggestedFolder,
-          confidence: aiResponse.confidence,
-          reasoning: aiResponse.reasoning,
-          alternatives: aiResponse.alternatives,
+          suggestedFolder: aiResponse!.suggestedFolder,
+          acceptedFolder: aiResponse!.suggestedFolder,
+          confidence: aiResponse?.confidence ?? 0,
+          reasoning: aiResponse?.reasoning ?? "",
+          alternatives: aiResponse?.alternatives ?? [],
           createdAt: new Date(),
         },
       });
@@ -185,14 +254,16 @@ export async function POST(req: NextRequest) {
       }
     } catch (err: any) {
       try {
-        const normalized = content.trim().replace(/\s+/g, " ").slice(0, 500);
+        const normalized = (reqType === "text")
+          ? textContent!.replace(/\s+/g, " ").slice(0, 500)
+          : `[image] ${new Date().toISOString()}`;
         const review = await (prisma as any).aICategorization.create({
           data: {
             id: randomUUID(),
             userId,
             contentPreview: normalized,
-            suggestedFolder: aiResponse.suggestedFolder,
-            acceptedFolder: aiResponse.suggestedFolder,
+            suggestedFolder: aiResponse!.suggestedFolder,
+            acceptedFolder: aiResponse!.suggestedFolder,
             createdAt: new Date(),
             folderId: folder.id,
           },
@@ -205,7 +276,9 @@ export async function POST(req: NextRequest) {
         );
       } catch (err2: any) {
         try {
-          const normalized = content.trim().replace(/\s+/g, " ").slice(0, 500);
+          const normalized = (reqType === "text")
+            ? textContent!.replace(/\s+/g, " ").slice(0, 500)
+            : `[image] ${new Date().toISOString()}`;
           const id = randomUUID();
           const cols: Array<{
             column_name: string;
@@ -236,21 +309,21 @@ export async function POST(req: NextRequest) {
 
           if (present("id")) addParamCol("id", id);
           if (present("userId")) addParamCol("userId", userId);
-          if (present("planetId")) addParamCol("planetId", planet.id);
+          if (present("planetId") && planet && planet.id) addParamCol("planetId", planet.id);
           if (present("folderId")) addParamCol("folderId", folder.id);
           if (present("contentPreview"))
             addParamCol("contentPreview", normalized);
           if (present("suggestedFolder"))
-            addParamCol("suggestedFolder", aiResponse.suggestedFolder);
+            addParamCol("suggestedFolder", aiResponse!.suggestedFolder);
           if (present("acceptedFolder"))
-            addParamCol("acceptedFolder", aiResponse.suggestedFolder);
+            addParamCol("acceptedFolder", aiResponse!.suggestedFolder);
           if (present("confidence"))
-            addParamCol("confidence", aiResponse.confidence ?? 0);
+            addParamCol("confidence", aiResponse?.confidence ?? 0);
           if (present("reasoning"))
-            addParamCol("reasoning", aiResponse.reasoning ?? "");
+            addParamCol("reasoning", aiResponse?.reasoning ?? "");
           if (present("alternatives")) {
             const dt = get("alternatives")?.data_type ?? "";
-            const alts = Array.isArray(aiResponse.alternatives)
+            const alts = Array.isArray(aiResponse?.alternatives)
               ? (aiResponse.alternatives as string[]).filter(
                   (x) => typeof x === "string",
                 )
@@ -327,10 +400,10 @@ export async function POST(req: NextRequest) {
       {
         folderId: folder.id,
         folderName: folder.name,
-        planetId: planet.id,
+        planetId: planet ? planet.id : undefined,
         reviewId,
-        suggestedFolder: aiResponse.suggestedFolder,
-        confidence: aiResponse.confidence,
+        suggestedFolder: aiResponse!.suggestedFolder,
+        confidence: aiResponse?.confidence ?? 0,
         aiCategorizationSaved,
       },
       { status: 200 },

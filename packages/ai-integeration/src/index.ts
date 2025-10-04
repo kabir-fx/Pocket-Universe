@@ -18,6 +18,66 @@ export interface ContentAnalysis {
   }>;
 }
 
+// Duplicate block removed
+
+// =====================
+// Image categorization
+// =====================
+
+export interface ImageAnalysis {
+  imageBase64: string;
+  mimeType: string;
+  userId: string;
+  existingFolders: string[];
+  userCorrections?: Array<{
+    originalContent: string;
+    suggestedFolder: string;
+    acceptedFolder: string;
+  }>;
+  filename?: string;
+}
+
+function buildImageCategorizationPrompt(a: ImageAnalysis): string {
+  let prompt = `You are classifying an image into a concise user folder name.\n` +
+    `Rules:\n` +
+    `- Return JSON only with keys: category (string), confidence (0..1), reasoning (<=200 chars), alternatives (3-4 plausible names).\n` +
+    `- Prefer an existing folder name when semantically appropriate.\n`;
+  if (a.existingFolders && a.existingFolders.length > 0) {
+    prompt += `Existing folders: ${a.existingFolders.join(", ")}\n`;
+  }
+  if (a.userCorrections && a.userCorrections.length > 0) {
+    prompt += `User past overrides:\n` + a.userCorrections.map(
+      (c) => `content:"${c.originalContent.substring(0, 50)}..." → suggested:"${c.suggestedFolder}" → user:"${c.acceptedFolder}"`,
+    ).join("\n") + "\n";
+  }
+  if (a.filename) {
+    prompt += `Filename hint: ${a.filename}\n`;
+  }
+  prompt += `Return JSON only.\n`;
+  return prompt;
+}
+
+export async function categorizeImage(analysis: ImageAnalysis): Promise<CategorizationResult> {
+  const model = getGeminiModel();
+  const prompt = buildImageCategorizationPrompt(analysis);
+
+  // Per Gemini docs, send image via inlineData alongside the prompt text
+  const parts: Array<any> = [
+    { text: prompt },
+    { inlineData: { data: analysis.imageBase64, mimeType: analysis.mimeType } },
+  ];
+
+  const result = await model.generateContent(parts);
+  const responseText = await result.response.text();
+  return parseJsonResponse(responseText);
+}
+
+export function bufferToBase64(buf: Buffer): string {
+  return buf.toString("base64");
+}
+
+// Duplicate function removed
+
 function buildCategorizationPrompt(analysis: ContentAnalysis): string {
   const { content, existingFolders, userCorrections } = analysis;
   let prompt = `Analyze this content and suggest the most appropriate category/folder name for organizing it.

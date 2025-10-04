@@ -5,6 +5,7 @@ import { ensureGalaxyByName } from "../../galaxy.ensure";
 import { randomUUID, createHash } from "crypto";
 import { supabaseAdmin } from "../../../../lib/supabase/supabaseAdmin";
 import prisma from "@repo/db/prisma";
+import { categorizeImage, bufferToBase64 } from "@repo/ai";
 
 const BUCKET = "user-images"
 const MAX_IMG_SIZE = 6 * 1024 * 1024; // ~6MB
@@ -52,7 +53,7 @@ export async function POST(req: NextRequest) {
             contentType = decoded.contentType;
         }
         
-        // Resolve folder only when provided; otherwise treat as orphaned (no folder association)
+        // Resolve folder; if not provided, use AI to suggest a folder
         let galaxyRes: { id: string; name: string } | null = null;
         if (galaxyName) {
             const ensured = await ensureGalaxyByName(session.user.id, galaxyName);
@@ -64,6 +65,37 @@ export async function POST(req: NextRequest) {
         const normalizedCT = contentType === "image/jpg" ? "image/jpeg" : contentType;
         if (!ALLOWED_MIME.has(normalizedCT)) return NextResponse.json({ error: "invalid img type"}, { status: 415 });
         if (buffer.length > MAX_IMG_SIZE) return NextResponse.json({ error: "img size too large" }, { status: 413 });
+
+        // If no folder provided, invoke Gemini to categorize and resolve folder
+        let aiResult: { suggestedFolder: string; confidence?: number; reasoning?: string; alternatives?: string[] } | null = null;
+        if (!galaxyRes) {
+            try {
+                const userFolders = await prisma.galaxy.findMany({
+                    where: { userId },
+                    select: { name: true },
+                    take: 100,
+                });
+                const ai = await categorizeImage({
+                    imageBase64: bufferToBase64(buffer),
+                    mimeType: normalizedCT,
+                    userId,
+                    existingFolders: userFolders.map((f) => f.name),
+                });
+                aiResult = ai;
+                const minConf = Number(process.env.IMG_AI_MIN_CONFIDENCE ?? 0.55);
+                const target = (typeof ai?.confidence === "number" && ai.confidence >= minConf)
+                    ? ai.suggestedFolder
+                    : "orphaned";
+                const ensured = await ensureGalaxyByName(userId, target);
+                if (ensured) {
+                    galaxyRes = ensured as any;
+                    galaxyName = ensured.name;
+                }
+            } catch (e) {
+                // If AI fails, proceed with orphaned
+                galaxyRes = null;
+            }
+        }
 
         const id = randomUUID();
         const ext = getExtFromContentType(normalizedCT);
@@ -108,6 +140,30 @@ export async function POST(req: NextRequest) {
                 ...(galaxyRes?.id ? { galaxies: { connect: { id: galaxyRes.id } } } : {}),
             },
         });
+
+        // After we know objectKey, persist AI review row (best-effort)
+        try {
+            const anyPrisma2: any = prisma as any;
+            if (!galaxyRes) {
+                // ensure fallback when AI not used
+                const ensured = await ensureGalaxyByName(userId, "orphaned");
+                galaxyRes = ensured as any;
+            }
+            await anyPrisma2?.aICategorization?.create?.({
+                data: {
+                    id: randomUUID(),
+                    userId,
+                    folderId: galaxyRes?.id,
+                    contentPreview: `[image] ${objectKey}`,
+                    suggestedFolder: aiResult?.suggestedFolder ?? (galaxyRes?.name || "orphaned"),
+                    acceptedFolder: galaxyRes?.name || "orphaned",
+                    confidence: aiResult?.confidence ?? 0,
+                    reasoning: aiResult?.reasoning ?? "",
+                    alternatives: Array.isArray(aiResult?.alternatives) ? (aiResult!.alternatives as string[]) : [],
+                    createdAt: new Date(),
+                },
+            });
+        } catch {}
 
         const signed = await supabaseAdmin
             .storage

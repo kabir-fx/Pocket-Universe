@@ -418,16 +418,7 @@ export function PlgCard({
                 Save with AI
               </button>
             ) : null}
-            {!isImageMode && (
-              <button
-                type="submit"
-                disabled={submitting}
-                className={styles.createButton}
-                data-submitting={submitting}
-              >
-                {submitting ? "Creating…" : "Create Planet"}
-              </button>
-            )}
+            {/* Removed manual Create button in text mode to prefer AI flow */}
           </div>
         </div>
 
@@ -512,16 +503,35 @@ export function PlgCard({
                 )}
               </div>
 
-              {/* Create Planet button on right side */}
-              <button
-                type="button"
-                disabled={submitting}
-                onClick={handleCreateNow}
-                className={`${styles.createButton} ${styles.createButtonLarge}`}
-                data-submitting={submitting}
-              >
-                {submitting ? "Creating…" : "Create Planet"}
-              </button>
+              {/* Replace with Save with AI for image mode if available */}
+              {onAiSubmit ? (
+                <button
+                  type="button"
+                  disabled={submitting}
+                  onClick={async () => {
+                    if (!onAiSubmit) return;
+                    // In image mode, planet is empty; we still call onSubmit to upload image,
+                    // but the user requested Save with AI replaces create, so delegate to onSubmit.
+                    await handleCreateNow();
+                  }}
+                  className={`${styles.createButton} ${styles.createButtonLarge}`}
+                  data-submitting={submitting}
+                  aria-label="Save with AI"
+                  title="Save with AI"
+                >
+                  {submitting ? "Saving…" : "Save with AI"}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  disabled={submitting}
+                  onClick={handleCreateNow}
+                  className={`${styles.createButton} ${styles.createButtonLarge}`}
+                  data-submitting={submitting}
+                >
+                  {submitting ? "Creating…" : "Create"}
+                </button>
+              )}
             </div>
           </div>
         )}

@@ -1,6 +1,6 @@
 "use client";
 
-import { FolderIcon, TrashIcon, PencilIcon } from "@heroicons/react/24/outline";
+import { FolderIcon, TrashIcon, PencilIcon, InformationCircleIcon } from "@heroicons/react/24/outline";
 import { PlanetItem } from "./planet-item";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -17,7 +17,7 @@ interface Planet {
 interface GalaxyFolderProps {
   id: string;
   name: string;
-  images?: { id: string; signedUrl: string | null; contentType: string; createdAt: string }[];
+  images?: { id: string; signedUrl: string | null; contentType: string; createdAt: string; objectKey?: string; reasoning?: string | null; alternatives?: string[] }[];
   planets: Planet[];
   planetCount: number;
   onEdit?: (id: string, currentName: string) => void;
@@ -250,7 +250,7 @@ export function GalaxyFolder({
         {images.length > 0 ? (
           <div className={styles.imageGrid}>
             {images.map((img) => (
-              <div key={img.id} className={styles.imageItem}>
+              <div key={img.id} className={styles.imageItem} data-image-id={img.id}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={img.signedUrl || ""}
@@ -378,6 +378,8 @@ export function GalaxyFolder({
                 >
                   {copiedId === img.id ? "✓" : "⧉"}
                 </button>
+                {/* Info button for AI reasoning/alternatives */}
+                <ImageInfoButton imageId={img.id} reasoning={img.reasoning ?? null} alternatives={img.alternatives ?? []} />
               </div>
             ))}
           </div>
@@ -423,3 +425,121 @@ export function GalaxyFolder({
 }
 
 export default GalaxyFolder;
+
+function ImageInfoButton({ imageId, reasoning, alternatives }: { imageId: string; reasoning: string | null; alternatives: string[] }) {
+  const [open, setOpen] = useState(false);
+  const btnRef = useRef<HTMLButtonElement | null>(null);
+  const [bubblePos, setBubblePos] = useState<{ x: number; align: "top" | "bottom" } | null>(null);
+
+  useEffect(() => {
+    function onDoc(e: MouseEvent) {
+      if (!btnRef.current) return;
+      if (!btnRef.current.contains(e.target as Node)) {
+        setOpen(false);
+        setBubblePos(null);
+      }
+    }
+    document.addEventListener("click", onDoc);
+    return () => document.removeEventListener("click", onDoc);
+  }, []);
+
+  useEffect(() => {
+    if (!open || !btnRef.current) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setOpen(false);
+        setBubblePos(null);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    const rect = btnRef.current.getBoundingClientRect();
+    const bubbleWidth = 360;
+    const estimatedBubbleHeight = 200;
+    const margin = 12;
+    const vw = window.innerWidth;
+    const spaceAbove = rect.top;
+    const align: "top" | "bottom" = spaceAbove >= estimatedBubbleHeight + margin ? "top" : "bottom";
+    const x = Math.min(Math.max(rect.right - bubbleWidth, margin), vw - bubbleWidth - margin);
+    setBubblePos({ x, align });
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
+
+  return (
+    <div className={styles.imageInfoWrap}>
+      <button
+        ref={btnRef}
+        className={`${styles.copyBtn} ${styles.imageInfoBtn}`}
+        aria-label="Show context"
+        title={reasoning ? "Show context" : "no context"}
+        onClick={(e) => {
+          e.stopPropagation();
+          setOpen((v) => !v);
+        }}
+        style={{ position: "absolute", top: 66, right: 6 }}
+      >
+        <InformationCircleIcon className={styles.infoIcon} />
+      </button>
+      {open && bubblePos && typeof document !== "undefined"
+        ? createPortal(
+            <div className={styles.infoOverlay} style={{ position: "fixed", inset: 0, zIndex: 9998 }}>
+              <div
+                className={styles.infoBubble}
+                role="dialog"
+                aria-label="Context"
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  position: "fixed",
+                  left: `${bubblePos.x}px`,
+                  ...(bubblePos.align === "top"
+                    ? { bottom: `${window.innerHeight - (btnRef.current?.getBoundingClientRect().top ?? 0) + 12}px` }
+                    : { top: `${(btnRef.current?.getBoundingClientRect().bottom ?? 0) + 12}px` }),
+                }}
+              >
+                <div className={styles.infoSection}>
+                  <div className={styles.infoSectionTitle}>Reasoning</div>
+                  <div className={styles.infoSectionBody}>{reasoning || "no context"}</div>
+                </div>
+                {alternatives && alternatives.length > 0 ? (
+                  <div className={styles.infoSection}>
+                    <div className={styles.infoSectionTitle}>Alternative names</div>
+                    <div className={styles.infoAltButtons}>
+                      {alternatives.slice(0, 10).map((alt, idx) => (
+                        <AltFolderButton key={idx} imageId={imageId} alt={alt} onDone={() => setOpen(false)} />
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
+    </div>
+  );
+}
+
+function AltFolderButton({ imageId, alt, onDone }: { imageId: string; alt: string; onDone: () => void }) {
+  const [loading, setLoading] = useState(false);
+  async function handleClick(e: React.MouseEvent) {
+    e.stopPropagation();
+    setLoading(true);
+    try {
+      const res = await fetch("/api/dashboard", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "attachImageToFolder", imageId, folderName: alt }),
+      });
+      if (!res.ok) return;
+      onDone();
+      window.location.reload();
+    } finally {
+      setLoading(false);
+    }
+  }
+  return (
+    <button type="button" className={styles.altBtn} title={alt} onClick={handleClick} disabled={loading}>
+      {loading ? "Adding…" : alt}
+    </button>
+  );
+}

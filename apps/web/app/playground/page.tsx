@@ -202,15 +202,24 @@ function Homeer() {
       showShadows={false}
       onSubmit={handleSubmit}
       onAiSubmit={async ({ planet, onSuccess }) => {
-        if (!planet) return;
         setSubmitting(true);
         setErrorMsg(null);
         setSuccessMsg(null);
         try {
+          // Decide whether this is an image categorization or text
+          const asDataUrl = planet && isDataUrl(planet) ? planet : null;
+          const asUrl = !asDataUrl && planet ? isLikelyImageUrl(planet) : null;
+
+          const payload = asDataUrl
+            ? { type: "image", data: { dataUrl: asDataUrl } }
+            : asUrl
+            ? { type: "image", data: { url: asUrl } }
+            : { type: "text", data: { content: planet || "" } };
+
           const res = await fetch("/api/ai/pipeline", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ content: planet }),
+            body: JSON.stringify(payload),
           });
           const body = await res.json().catch(() => null);
           if (!res.ok) {
@@ -221,10 +230,7 @@ function Homeer() {
             }
             return;
           }
-          setSuccessMsg(
-            "Saved with AI! You can review it on your dashboard anytime.",
-          );
-          // Refresh local folders list in case a new folder was created by AI
+          setSuccessMsg("Saved with AI! You can review it on your dashboard anytime.");
           await fetchGalaxies();
           if (onSuccess) onSuccess();
         } finally {

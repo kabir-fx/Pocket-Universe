@@ -79,6 +79,9 @@ export async function GET() {
   let contentToReason: Record<string, string> = {};
   let planetIdToAlternatives: Record<string, string[]> = {};
   let contentToAlternatives: Record<string, string[]> = {};
+  // For images, map objectKey => reasoning/alternatives when available
+  const imageKeyToReason: Record<string, string> = {};
+  const imageKeyToAlternatives: Record<string, string[]> = {};
   const normalize = (s: string) => s.trim().replace(/\s+/g, " ").slice(0, 500);
   try {
     const anyPrisma: any = prisma as any;
@@ -129,6 +132,18 @@ export async function GET() {
           planetIdToAlternatives[r.planetId as string] = (
             r.alternatives as string[]
           ).filter((x) => typeof x === "string");
+        }
+        // Image enrichment: expect contentPreview like "[image] <objectKey>"
+        if (
+          typeof r?.contentPreview === "string" &&
+          r.contentPreview.startsWith("[image] ")
+        ) {
+          const key = r.contentPreview.slice("[image] ".length).trim();
+          if (key) {
+            if (typeof r?.reasoning === "string") imageKeyToReason[key] = r.reasoning as string;
+            if (Array.isArray(r?.alternatives))
+              imageKeyToAlternatives[key] = (r.alternatives as string[]).filter((x) => typeof x === "string");
+          }
         }
       }
 
@@ -218,6 +233,14 @@ export async function GET() {
             r.alternatives as string[]
           ).filter((x) => typeof x === "string");
         }
+        if (typeof r?.contentPreview === "string" && r.contentPreview.startsWith("[image] ")) {
+          const key = r.contentPreview.slice("[image] ".length).trim();
+          if (key) {
+            if (typeof r?.reasoning === "string") imageKeyToReason[key] = r.reasoning as string;
+            if (Array.isArray(r?.alternatives))
+              imageKeyToAlternatives[key] = (r.alternatives as string[]).filter((x) => typeof x === "string");
+          }
+        }
       }
 
       function findReasonFor(content: string): string | undefined {
@@ -273,9 +296,11 @@ export async function GET() {
             return {
               ...img,
               signedUrl: res.data?.signedUrl || null,
+              reasoning: imageKeyToReason[img.objectKey] ?? null,
+              alternatives: imageKeyToAlternatives[img.objectKey] ?? [],
             };
           } catch {
-            return { ...img, signedUrl: null };
+            return { ...img, signedUrl: null, reasoning: null, alternatives: [] };
           }
         }),
       );
@@ -311,9 +336,14 @@ export async function GET() {
         const res = await supabaseAdmin.storage
           .from(img.bucket)
           .createSignedUrl(img.objectKey, 60 * 60);
-        return { ...img, signedUrl: res.data?.signedUrl || null };
+        return {
+          ...img,
+          signedUrl: res.data?.signedUrl || null,
+          reasoning: imageKeyToReason[img.objectKey] ?? null,
+          alternatives: imageKeyToAlternatives[img.objectKey] ?? [],
+        };
       } catch {
-        return { ...img, signedUrl: null };
+        return { ...img, signedUrl: null, reasoning: null, alternatives: [] };
       }
     }),
   );
@@ -555,28 +585,40 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
     const action = body?.action;
-    if (action !== "attachPlanetToFolder") {
+    if (action !== "attachPlanetToFolder" && action !== "attachImageToFolder") {
       return NextResponse.json({ error: "Invalid action" }, { status: 400 });
     }
 
     const planetId: string | undefined = body?.planetId;
+    const imageId: string | undefined = body?.imageId;
     const rawFolderName: string | undefined = body?.folderName;
     const folderName = (rawFolderName ?? "").toString().trim().slice(0, 80);
 
-    if (!planetId || !folderName) {
-      return NextResponse.json(
-        { error: "planetId and folderName are required" },
-        { status: 400 },
-      );
+    if (action === "attachPlanetToFolder") {
+      if (!planetId || !folderName) {
+        return NextResponse.json(
+          { error: "planetId and folderName are required" },
+          { status: 400 },
+        );
+      }
+    } else if (action === "attachImageToFolder") {
+      if (!imageId || !folderName) {
+        return NextResponse.json(
+          { error: "imageId and folderName are required" },
+          { status: 400 },
+        );
+      }
     }
 
-    // Verify planet belongs to user
-    const planet = await prisma.planet.findFirst({
-      where: { id: planetId, userId: session.user.id },
-      select: { id: true },
-    });
-    if (!planet) {
-      return NextResponse.json({ error: "Planet not found" }, { status: 404 });
+    if (action === "attachPlanetToFolder") {
+      // Verify planet belongs to user
+      const planet = await prisma.planet.findFirst({
+        where: { id: planetId, userId: session.user.id },
+        select: { id: true },
+      });
+      if (!planet) {
+        return NextResponse.json({ error: "Planet not found" }, { status: 404 });
+      }
     }
 
     // Find or create the folder for this user
@@ -608,74 +650,152 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Move planet: disconnect from all existing folders for this user, then connect to the selected folder
-    await prisma.$transaction(async (tx) => {
-      const existing = await tx.galaxy.findMany({
-        where: {
-          userId: session.user.id,
-          planets: { some: { id: planetId } },
-        },
-        select: { id: true },
-      });
-
-      if (existing.length > 0) {
-        await tx.planet.update({
-          where: { id: planetId },
-          data: {
-            galaxies: {
-              disconnect: existing.map((g) => ({ id: g.id })),
-            },
-          },
-        });
-      }
-
-      // Now connect to the target folder (idempotent-ish; if already present, it's fine)
-      await tx.planet.update({
-        where: { id: planetId },
-        data: { galaxies: { connect: { id: folder.id } } },
-      });
-
-      // Update acceptedFolder in AI categorization records for this planet
-      // Using raw SQL because Prisma client may not have the model properly typed
-      try {
-        const updateResult = await tx.$executeRawUnsafe(
-          `UPDATE "AICategorization" SET "acceptedFolder" = $1 WHERE "planetId" = $2 AND "userId" = $3`,
-          folderName,
-          planetId,
-          session.user.id,
-        );
-        console.log(
-          `[AI] Updated ${updateResult} AICategorization record(s) for planet ${planetId} to acceptedFolder="${folderName}"`,
-        );
-      } catch (aiUpdateError: any) {
-        // If table doesn't exist yet, that's okay
-        console.warn(
-          "Could not update AICategorization.acceptedFolder:",
-          aiUpdateError?.message,
-        );
-      }
-
-      // Auto-delete any folders that became empty (excluding the target folder)
-      const candidateIds = existing
-        .map((g) => g.id)
-        .filter((id) => id !== folder!.id);
-      if (candidateIds.length > 0) {
-        const deletedCount = await tx.galaxy.deleteMany({
+    if (action === "attachPlanetToFolder") {
+      // Move planet: disconnect from all existing folders for this user, then connect to the selected folder
+      await prisma.$transaction(async (tx) => {
+        const existing = await tx.galaxy.findMany({
           where: {
             userId: session.user.id,
-            id: { in: candidateIds },
-            planets: { none: {} },
+            planets: { some: { id: planetId } },
           },
+          select: { id: true },
         });
-        if (deletedCount.count > 0) {
+
+        if (existing.length > 0) {
+          await tx.planet.update({
+            where: { id: planetId },
+            data: {
+              galaxies: {
+                disconnect: existing.map((g) => ({ id: g.id })),
+              },
+            },
+          });
+        }
+
+        // Now connect to the target folder (idempotent-ish; if already present, it's fine)
+        await tx.planet.update({
+          where: { id: planetId },
+          data: { galaxies: { connect: { id: folder.id } } },
+        });
+
+        // Update acceptedFolder in AI categorization records for this planet
+        try {
+          const updateResult = await tx.$executeRawUnsafe(
+            `UPDATE "AICategorization" SET "acceptedFolder" = $1 WHERE "planetId" = $2 AND "userId" = $3`,
+            folderName,
+            planetId,
+            session.user.id,
+          );
           console.log(
-            `[Cleanup] Auto-deleted ${deletedCount.count} empty folder(s)`,
+            `[AI] Updated ${updateResult} AICategorization record(s) for planet ${planetId} to acceptedFolder="${folderName}"`,
+          );
+        } catch (aiUpdateError: any) {
+          console.warn(
+            "Could not update AICategorization.acceptedFolder:",
+            aiUpdateError?.message,
           );
         }
+
+        // Auto-delete any folders that became empty (excluding the target folder)
+        const candidateIds = existing
+          .map((g) => g.id)
+          .filter((id) => id !== folder!.id);
+        if (candidateIds.length > 0) {
+          const deletedCount = await tx.galaxy.deleteMany({
+            where: {
+              userId: session.user.id,
+              id: { in: candidateIds },
+              planets: { none: {} },
+            },
+          });
+          if (deletedCount.count > 0) {
+            console.log(
+              `[Cleanup] Auto-deleted ${deletedCount.count} empty folder(s)`,
+            );
+          }
+        }
+      });
+
+      return NextResponse.json({ ok: true, folderId: folder.id, moved: true });
+    }
+
+    // attachImageToFolder
+    // Verify image and compute new storage key
+    const image = await prisma.image.findFirst({
+      where: { id: imageId!, userId: session.user.id },
+      select: { id: true, bucket: true, objectKey: true },
+    });
+    if (!image) {
+      return NextResponse.json({ error: "Image not found" }, { status: 404 });
+    }
+
+    function slugify(input: string): string {
+      return String(input)
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)+/g, "");
+    }
+    const fileName = image.objectKey.split("/").pop() || image.objectKey;
+    const newKey = `${session.user.id}/${slugify(folderName)}/${fileName}`;
+
+    // Move storage object then update DB relations
+    try {
+      const { error } = await supabaseAdmin.storage
+        .from(image.bucket)
+        .move(image.objectKey, newKey);
+      if (error) {
+        return NextResponse.json({ error: `Move failed: ${error.message}` }, { status: 500 });
+      }
+    } catch (e: any) {
+      return NextResponse.json({ error: e?.message || "Move failed" }, { status: 500 });
+    }
+
+    await prisma.$transaction(async (tx) => {
+      // Disconnect from existing folders for this user and connect to target
+      const existing = await tx.galaxy.findMany({
+        where: { userId: session.user.id, images: { some: { id: image.id } } },
+        select: { id: true },
+      });
+      if (existing.length > 0) {
+        await tx.image.update({
+          where: { id: image.id },
+          data: { galaxies: { disconnect: existing.map((g) => ({ id: g.id })) } },
+        });
+      }
+      await tx.image.update({
+        where: { id: image.id },
+        data: { objectKey: newKey, galaxies: { connect: { id: folder.id } } },
+      });
+
+      // Update acceptedFolder on AI categorization rows for this image (match by contentPreview string)
+      try {
+        // 1) Update acceptedFolder
+        await tx.$executeRawUnsafe(
+          `UPDATE "AICategorization" SET "acceptedFolder" = $1 WHERE "userId" = $2 AND "contentPreview" = $3`,
+          folderName,
+          session.user.id,
+          `[image] ${image.objectKey}`,
+        );
+        // 2) Keep reasoning/alternatives discoverable by updating contentPreview to the new objectKey
+        await tx.$executeRawUnsafe(
+          `UPDATE "AICategorization" SET "contentPreview" = $1 WHERE "userId" = $2 AND "contentPreview" = $3`,
+          `[image] ${newKey}`,
+          session.user.id,
+          `[image] ${image.objectKey}`,
+        );
+      } catch {}
+
+      // Clean up any empty folders (excluding target)
+      const candidateIds = existing.map((g) => g.id).filter((id) => id !== folder!.id);
+      if (candidateIds.length > 0) {
+        await tx.galaxy.deleteMany({
+          where: { userId: session.user.id, id: { in: candidateIds }, planets: { none: {} }, images: { none: {} } },
+        });
       }
     });
 
-    return NextResponse.json({ ok: true, folderId: folder.id, moved: true });
+    return NextResponse.json({ ok: true, folderId: folder.id, moved: true, newKey });
   } catch (error) {
     console.error("Dashboard POST error:", error);
     return NextResponse.json({ error: "Request failed" }, { status: 500 });
