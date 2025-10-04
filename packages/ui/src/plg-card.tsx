@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useCallback, useState } from "react";
 import styles from "./playground-card.module.css";
 import {
   FolderIcon,
@@ -22,6 +22,7 @@ export interface PlgCardProps {
   onSubmit: (args: {
     galaxy?: string;
     planet: string;
+    imgDataUrl?: string;
     onSuccess?: () => void;
   }) => Promise<void> | void;
   onAiSubmit?: (args: {
@@ -48,10 +49,12 @@ export function PlgCard({
   const [isTypingGalaxy, setIsTypingGalaxy] = useState(false);
   const [showGalaxyDropdown, setShowGalaxyDropdown] = useState(false);
   const [newGalaxyName, setNewGalaxyName] = useState("");
+  const [pastedImageDataUrl, setPastedImageDataUrl] = useState<string | null>(null);
 
   const clearForm = () => {
     setGalaxy("");
     setPlanet("");
+    setPastedImageDataUrl(null);
   };
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
@@ -59,6 +62,7 @@ export function PlgCard({
     await onSubmit({
       galaxy: galaxy || undefined,
       planet,
+      imgDataUrl: pastedImageDataUrl || undefined,
       onSuccess: clearForm,
     });
   }
@@ -70,6 +74,67 @@ export function PlgCard({
       planet,
       onSuccess: clearForm,
     });
+  }
+
+  const handlePaste = useCallback((e: React.ClipboardEvent<HTMLInputElement>) => {
+    try {
+      const items = e.clipboardData?.items || [];
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (item && item.type && item.type.startsWith("image/")) {
+          const file = item.getAsFile();
+          if (file) {
+            e.preventDefault();
+            const reader = new FileReader();
+            reader.onload = async () => {
+              const result = reader.result;
+              if (typeof result === "string") {
+                const optimized = await maybeDownscaleDataUrl(result, 1600, 0.85);
+                setPastedImageDataUrl(optimized);
+                // Clear any text content to reflect image mode
+                setPlanet("");
+              }
+            };
+            reader.readAsDataURL(file);
+            return;
+          }
+        }
+      }
+      // If no image found, allow normal paste of text
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const clearPastedImage = useCallback(() => setPastedImageDataUrl(null), []);
+
+  async function maybeDownscaleDataUrl(dataUrl: string, maxDim: number, quality: number): Promise<string> {
+    try {
+      const img = new Image();
+      const done: Promise<string> = new Promise((resolve) => {
+        img.onload = () => {
+          const w = img.width;
+          const h = img.height;
+          const scale = Math.min(1, maxDim / Math.max(w, h));
+          const dstW = Math.max(1, Math.round(w * scale));
+          const dstH = Math.max(1, Math.round(h * scale));
+          const canvas = document.createElement("canvas");
+          canvas.width = dstW;
+          canvas.height = dstH;
+          const ctx = canvas.getContext("2d");
+          if (!ctx) return resolve(dataUrl);
+          ctx.drawImage(img, 0, 0, dstW, dstH);
+          const mime = dataUrl.startsWith("data:image/png") ? "image/png" : "image/jpeg";
+          const out = canvas.toDataURL(mime, mime === "image/png" ? undefined : quality);
+          resolve(out);
+        };
+        img.onerror = () => resolve(dataUrl);
+      });
+      img.src = dataUrl;
+      return await done;
+    } catch {
+      return dataUrl;
+    }
   }
 
   return (
@@ -188,16 +253,27 @@ export function PlgCard({
           </div>
 
           <div className={styles.inputRow}>
-            <input
-              id="planet"
-              name="planet"
-              type="text"
-              className={styles.planetInput}
-              placeholder="Paste your links or content here..."
-              value={planet}
-              onChange={(e) => setPlanet(e.target.value)}
-              required
-            />
+            {pastedImageDataUrl ? (
+              <div className={styles.previewWrap} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={pastedImageDataUrl} alt="Pasted preview" style={{ width: 72, height: 72, objectFit: "cover", borderRadius: 8, border: "1px solid #e5e7eb" }} />
+                <button type="button" onClick={clearPastedImage} className={styles.headerAddButton} aria-label="Remove image">
+                  Remove
+                </button>
+              </div>
+            ) : (
+              <input
+                id="planet"
+                name="planet"
+                type="text"
+                className={styles.planetInput}
+                placeholder="Paste your links, content, or image here..."
+                value={planet}
+                onChange={(e) => setPlanet(e.target.value)}
+                onPaste={handlePaste}
+                required
+              />
+            )}
             {onAiSubmit ? (
               <button
                 type="button"

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { authOptions } from "../../../lib/nextAuth/auth";
 import { getServerSession } from "next-auth";
 import prisma from "@repo/db/prisma";
+import { supabaseAdmin } from "../../../lib/supabase/supabaseAdmin";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -16,6 +17,17 @@ export async function GET() {
     select: {
       id: true,
       name: true,
+      images: {
+        select: {
+          id: true,
+          bucket: true,
+          objectKey: true,
+          contentType: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: "desc" },
+        take: 12,
+      },
       planets: {
         select: {
           id: true,
@@ -231,19 +243,39 @@ export async function GET() {
     // If the table or client isn't available, skip enrichment silently
   }
 
-  // Enrich with reasoning and alternatives if available
-  const enrichedGalaxies = galaxies.map((g) => ({
-    ...g,
-    planets: g.planets.map((p) => ({
-      ...p,
-      reasoning:
-        planetIdToReason[p.id] ?? contentToReason[normalize(p.content)] ?? null,
-      alternatives:
-        planetIdToAlternatives[p.id] ??
-        contentToAlternatives[normalize(p.content)] ??
-        [],
-    })),
-  }));
+  // Add signed URLs to images and enrich planets
+  const enrichedGalaxies = await Promise.all(
+    galaxies.map(async (g) => {
+      const signedImages = await Promise.all(
+        (g.images || []).map(async (img: any) => {
+          try {
+            const res = await supabaseAdmin.storage
+              .from(img.bucket)
+              .createSignedUrl(img.objectKey, 60 * 60);
+            return {
+              ...img,
+              signedUrl: res.data?.signedUrl || null,
+            };
+          } catch {
+            return { ...img, signedUrl: null };
+          }
+        }),
+      );
+      return {
+        ...g,
+        images: signedImages,
+        planets: g.planets.map((p) => ({
+          ...p,
+          reasoning:
+            planetIdToReason[p.id] ?? contentToReason[normalize(p.content)] ?? null,
+          alternatives:
+            planetIdToAlternatives[p.id] ??
+            contentToAlternatives[normalize(p.content)] ??
+            [],
+        })),
+      };
+    }),
+  );
   const enrichedOrphaned = orphanedPlanets.map((p) => ({
     ...p,
     reasoning:
@@ -278,49 +310,27 @@ export async function DELETE(req: NextRequest) {
   const { type, id } = await req.json();
 
   // Validate required fields
-  if (!type) {
-    return NextResponse.json({ error: "Type is required" }, { status: 400 });
+  if (!type || !id) {
+    return NextResponse.json({ error: "Type and ID are required" }, { status: 400 });
   }
 
   if (type === "planet") {
-    if (!id) {
-      return NextResponse.json(
-        { error: "ID is required for planet deletion" },
-        { status: 400 },
-      );
-    }
-
-    const res = await prisma.planet.deleteMany({
+    const res = await prisma.planet.delete({
       where: {
         userId: session.user.id,
         id: id,
       },
     });
 
-    if (res.count === 0) {
+    if (!res) {
       return NextResponse.json(
         { error: "Planet not found or already deleted" },
         { status: 404 },
       );
     }
 
-    // After deleting a planet, remove any folders that became empty
-    await prisma.galaxy.deleteMany({
-      where: {
-        userId: session.user.id,
-        planets: { none: {} },
-      },
-    });
-
     return NextResponse.json(res);
   } else if (type === "folder") {
-    if (!id) {
-      return NextResponse.json(
-        { error: "ID is required for Folder deletion" },
-        { status: 400 },
-      );
-    }
-
     // Check if this is the default "Orphaned Planets" folder (virtual folder)
     if (id === "orphaned-planets") {
       return NextResponse.json(
@@ -373,12 +383,53 @@ export async function DELETE(req: NextRequest) {
     }
 
     return NextResponse.json(result);
+  } else if (type === "image") {
+    // Look up image first to get storage path and verify ownership
+    const img = await prisma.image.findFirst({
+      where: { id, userId: session.user.id },
+      select: { id: true, bucket: true, objectKey: true },
+    });
+
+    if (!img) {
+      return NextResponse.json(
+        { error: "Image not found or already deleted" },
+        { status: 404 },
+      );
+    }
+
+    // Attempt to remove from Supabase storage (best-effort)
+    try {
+      const { error } = await supabaseAdmin.storage.from(img.bucket).remove([img.objectKey]);
+      if (error) {
+        console.warn("[storage] remove failed", img.bucket, img.objectKey, error.message);
+      }
+    } catch (e: any) {
+      console.warn("[storage] exception during remove", e?.message || e);
+    }
+
+    // Remove DB row
+    try {
+      await prisma.image.delete({ where: { id: img.id } });
+    } catch (e: any) {
+      return NextResponse.json({ error: "Failed to delete image row" }, { status: 500 });
+    }
   } else {
     return NextResponse.json(
       { error: "Invalid type. Must be 'planet' or 'folder'" },
       { status: 400 },
     );
   }
+
+  // After deletions, remove any folders that became empty
+  await prisma.galaxy.deleteMany({
+    where: {
+      userId: session.user.id,
+      planets: { none: {} },
+      images: { none: {} }
+    },
+  });
+
+  return NextResponse.json({ ok: true });
 }
 
 export async function PUT(req: NextRequest) {

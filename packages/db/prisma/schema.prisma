@@ -28,7 +28,9 @@ model User {
   galaxies Galaxy[]
   planets  Planet[]
 
-  aiSlop  AICategorization[]
+  images Image[]
+
+  aiSlop AICategorization[]
 
   createdAt DateTime @default(now())
 }
@@ -70,28 +72,30 @@ model VerificationToken {
 }
 
 model Galaxy {
-  id        String   @id @default(cuid())
-  name      String
-  user      User     @relation(fields: [userId], references: [id])
-  userId    String
-  planets   Planet[]
+  id                String             @id @default(cuid())
+  name              String
+  user              User               @relation(fields: [userId], references: [id])
+  userId            String
+  planets           Planet[]
   aiCategorizations AICategorization[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  shareable Boolean
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  shareable         Boolean
+
+  images Image[]
 
   @@unique([userId, name])
 }
 
 model Planet {
-  id        String   @id @default(cuid())
-  content   String
-  user      User     @relation(fields: [userId], references: [id])
-  userId    String
-  galaxies  Galaxy[]
+  id                String             @id @default(cuid())
+  content           String
+  user              User               @relation(fields: [userId], references: [id])
+  userId            String
+  galaxies          Galaxy[]
   aiCategorizations AICategorization[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
 }
 
 model AICategorization {
@@ -102,13 +106,36 @@ model AICategorization {
   planet          Planet?  @relation(fields: [planetId], references: [id])
   folderId        String?
   folder          Galaxy?  @relation(fields: [folderId], references: [id])
-  contentPreview  String   // first ~500-1000 chars, not full blob
+  contentPreview  String // first ~500-1000 chars, not full blob
   suggestedFolder String
-  acceptedFolder  String?  // set when user accepts/overrides
+  acceptedFolder  String? // set when user accepts/overrides
   confidence      Float
   reasoning       String?
   alternatives    String[]
   createdAt       DateTime @default(now())
 
   @@index([userId, createdAt])
+}
+
+model Image {
+  id             String    @id @default(cuid())
+  userId         String
+  user           User      @relation(fields: [userId], references: [id])
+
+  galaxies       Galaxy[]
+
+  bucket         String
+  objectKey      String
+  contentType    String
+  sizeBytes      BigInt
+  checksumSha256 String?
+  width          Int?
+  height         Int?
+  isPublic       Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+  deletedAt      DateTime?
+
+  @@unique([userId, objectKey])
+  @@index([userId])
+  @@index([bucket, objectKey])
 }
