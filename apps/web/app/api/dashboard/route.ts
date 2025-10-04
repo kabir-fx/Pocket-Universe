@@ -56,6 +56,24 @@ export async function GET() {
     orderBy: { createdAt: "desc" },
   });
 
+  // Fetch images that don't belong to any galaxy (orphaned images)
+  const orphanedImages = await prisma.image.findMany({
+    where: {
+      userId: session.user.id,
+      galaxies: {
+        none: {},
+      },
+    },
+    select: {
+      id: true,
+      bucket: true,
+      objectKey: true,
+      contentType: true,
+      createdAt: true,
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
   // Try to enrich planets with AI reasoning and alternatives using planetId link first, fallback to content match
   let planetIdToReason: Record<string, string> = {};
   let contentToReason: Record<string, string> = {};
@@ -286,6 +304,20 @@ export async function GET() {
       [],
   }));
 
+  // Sign orphaned images
+  const orphanedSignedImages = await Promise.all(
+    orphanedImages.map(async (img: any) => {
+      try {
+        const res = await supabaseAdmin.storage
+          .from(img.bucket)
+          .createSignedUrl(img.objectKey, 60 * 60);
+        return { ...img, signedUrl: res.data?.signedUrl || null };
+      } catch {
+        return { ...img, signedUrl: null };
+      }
+    }),
+  );
+
   // Always show virtual galaxy for adding new folder names
   const result: any[] = [...enrichedGalaxies];
 
@@ -293,6 +325,7 @@ export async function GET() {
   result.push({
     id: "orphaned-planets", // Virtual ID
     name: "Orphaned Planets",
+    images: orphanedSignedImages,
     planets: enrichedOrphaned.length > 0 ? enrichedOrphaned : [],
     _count: { planets: enrichedOrphaned.length },
     isVirtual: true,

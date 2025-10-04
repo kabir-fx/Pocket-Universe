@@ -20,6 +20,16 @@
   overflow: hidden;
 }
 
+/* Drag-and-drop active state turns entire background black */
+.dragActive {
+  background: #000000 !important;
+}
+
+/* After image is attached */
+.imageMode {
+  background: #000000 !important;
+}
+
 .cardWide {
   width: 100%;
   max-width: 1100px;
@@ -269,6 +279,15 @@
   overflow: hidden;
 }
 
+/* In image preview mode, render the dropdown above the button so it's visible */
+.imageMode .dropdownMenu {
+  top: auto;
+  bottom: 100%;
+  margin-top: 0;
+  margin-bottom: 8px;
+  box-shadow: 0 -4px 12px rgba(0,0,0,0.18);
+}
+
 .dropdownHeader {
   display: flex;
   justify-content: flex-start;
@@ -360,6 +379,67 @@
   align-items: center;
 }
 
+/* Full-size drop zone when dragging images over input */
+.dropArea {
+  flex: 1;
+  min-height: 220px;
+  border-radius: 20px;
+  border: 3px dashed rgba(255, 255, 255, 0.65);
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #f7f7f8;
+  transition: all 0.2s ease;
+}
+
+.dropArea:hover {
+  border-color: rgba(255, 255, 255, 0.85);
+  background: rgba(0, 0, 0, 0.85);
+}
+
+.dropInner {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 32px;
+}
+
+.dropTitle {
+  font-weight: 700;
+  font-size: 24px;
+  letter-spacing: -0.5px;
+}
+
+.dropSub {
+  font-size: 15px;
+  color: #d1d5db;
+  font-weight: 400;
+}
+
+/* Full screen overlay used while dragging */
+.dropOverlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.72);
+  z-index: 9999;
+  pointer-events: none;
+}
+
+.dropOverlay .dropArea {
+  pointer-events: auto;
+  width: min(500px, 85vw);
+  height: min(500px, 85vw);
+  aspect-ratio: 1 / 1;
+  min-height: unset;
+  border-width: 3px;
+  box-shadow: 0 0 60px 20px rgba(255, 255, 255, 0.15);
+}
+
 .planetInput {
   flex: 4;
   padding: 12px 16px;
@@ -370,10 +450,6 @@
   font-size: 16px;
   outline: none;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
-  /* Base glowing ring so it feels luminous even when not focused */
-  /* box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.85),
-    0 0 34px 10px rgba(255, 255, 255, 0.20); */
 }
 
 .planetInput:focus {
@@ -412,6 +488,73 @@
   cursor: not-allowed;
   transform: none;
   box-shadow: none;
+}
+
+/* Large preview layout after image drop */
+.largePreviewWrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  min-height: min(70vh, 72dvh);
+  position: relative;
+  overflow: hidden; /* prevent page scroll in image mode */
+}
+
+.largePreviewFrame {
+  position: relative;
+  display: inline-block;
+}
+
+.largePreviewImg {
+  width: min(68vw, 980px);
+  height: min(68vh, 72dvh);
+  object-fit: contain;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: #0b0d12;
+  box-shadow: 0 10px 32px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.06) inset;
+}
+
+.closeBtn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border: 1px solid rgba(239,68,68,0.55);
+  background: rgba(239,68,68,0.9);
+  color: #fff;
+  font-weight: 800;
+  line-height: 30px;
+  text-align: center;
+  cursor: pointer;
+  box-shadow: 0 4px 18px rgba(239,68,68,0.4);
+}
+
+.closeBtn:hover {
+  background: rgba(220,38,38,1);
+}
+
+.createButtonLarge {
+  padding: 16px 24px;
+  font-size: 18px;
+  border-radius: 9999px;
+}
+
+/* Right-side actions when in image mode */
+.imageModeRow {
+  display: flex;
+  justify-content: flex-end;
+  padding: 12px 45px 0 8px;
+}
+
+.imageActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .sectionTitle {

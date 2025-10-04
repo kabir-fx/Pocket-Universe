@@ -40,24 +40,25 @@ export async function POST(req: NextRequest) {
             if (!file || !(file instanceof File)) {
                 return NextResponse.json({ error: "No file" }, { status: 400 });
             }
-            if (!galaxyName) return NextResponse.json({ error: "Missing galaxy" }, { status: 400 });
             const ab = await file.arrayBuffer();
             buffer = Buffer.from(ab);
             contentType = file.type || "";
         } else {
             const { img, galaxy } = await req.json();
             if (!img) return NextResponse.json({ error: "No img"}, { status: 400 });
-            if (!galaxy || typeof galaxy !== "string" || !galaxy.trim()) {
-                return NextResponse.json({ error: "Missing galaxy" }, { status: 400 });
-            }
-            galaxyName = galaxy.trim();
+            galaxyName = (typeof galaxy === "string" ? galaxy : "").trim();
             const decoded = await decodeImage(img);
             buffer = decoded.buffer;
             contentType = decoded.contentType;
         }
-
-        const galaxyRes = await ensureGalaxyByName(session.user.id, galaxyName);
-        if (!galaxyRes) return NextResponse.json({ error: "Failed to create/get new folder for img"}, { status: 403 });
+        
+        // Resolve folder only when provided; otherwise treat as orphaned (no folder association)
+        let galaxyRes: { id: string; name: string } | null = null;
+        if (galaxyName) {
+            const ensured = await ensureGalaxyByName(session.user.id, galaxyName);
+            if (!ensured) return NextResponse.json({ error: "Failed to create/get new folder for img"}, { status: 403 });
+            galaxyRes = ensured as any;
+        }
 
         // Normalize common CDN content types (e.g., image/jpg)
         const normalizedCT = contentType === "image/jpg" ? "image/jpeg" : contentType;
@@ -66,7 +67,7 @@ export async function POST(req: NextRequest) {
 
         const id = randomUUID();
         const ext = getExtFromContentType(normalizedCT);
-        const objectKey = buildObjectKey({ userId, galaxyName: galaxyRes.name, fileId: id, ext });
+        const objectKey = buildObjectKey({ userId, galaxyName: (galaxyRes?.name || "orphaned"), fileId: id, ext });
 
         const uploadRes = await supabaseAdmin
             .storage
@@ -104,7 +105,7 @@ export async function POST(req: NextRequest) {
                 sizeBytes: BigInt(buffer.length),
                 checksumSha256,
                 isPublic: false,
-                galaxies: { connect: { id: galaxyRes.id } },
+                ...(galaxyRes?.id ? { galaxies: { connect: { id: galaxyRes.id } } } : {}),
             },
         });
 
@@ -122,7 +123,7 @@ export async function POST(req: NextRequest) {
             contentType: normalizedCT,
             sizeBytes: buffer.length,
             checksumSha256,
-            galaxyId: galaxyRes.id,
+            galaxyId: galaxyRes?.id ?? null,
             signedUrl,
         }, { status: 200 });
     } catch (err: any) {
