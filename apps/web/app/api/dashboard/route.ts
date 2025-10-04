@@ -140,9 +140,12 @@ export async function GET() {
         ) {
           const key = r.contentPreview.slice("[image] ".length).trim();
           if (key) {
-            if (typeof r?.reasoning === "string") imageKeyToReason[key] = r.reasoning as string;
+            if (typeof r?.reasoning === "string")
+              imageKeyToReason[key] = r.reasoning as string;
             if (Array.isArray(r?.alternatives))
-              imageKeyToAlternatives[key] = (r.alternatives as string[]).filter((x) => typeof x === "string");
+              imageKeyToAlternatives[key] = (r.alternatives as string[]).filter(
+                (x) => typeof x === "string",
+              );
           }
         }
       }
@@ -233,12 +236,18 @@ export async function GET() {
             r.alternatives as string[]
           ).filter((x) => typeof x === "string");
         }
-        if (typeof r?.contentPreview === "string" && r.contentPreview.startsWith("[image] ")) {
+        if (
+          typeof r?.contentPreview === "string" &&
+          r.contentPreview.startsWith("[image] ")
+        ) {
           const key = r.contentPreview.slice("[image] ".length).trim();
           if (key) {
-            if (typeof r?.reasoning === "string") imageKeyToReason[key] = r.reasoning as string;
+            if (typeof r?.reasoning === "string")
+              imageKeyToReason[key] = r.reasoning as string;
             if (Array.isArray(r?.alternatives))
-              imageKeyToAlternatives[key] = (r.alternatives as string[]).filter((x) => typeof x === "string");
+              imageKeyToAlternatives[key] = (r.alternatives as string[]).filter(
+                (x) => typeof x === "string",
+              );
           }
         }
       }
@@ -300,7 +309,12 @@ export async function GET() {
               alternatives: imageKeyToAlternatives[img.objectKey] ?? [],
             };
           } catch {
-            return { ...img, signedUrl: null, reasoning: null, alternatives: [] };
+            return {
+              ...img,
+              signedUrl: null,
+              reasoning: null,
+              alternatives: [],
+            };
           }
         }),
       );
@@ -310,7 +324,9 @@ export async function GET() {
         planets: g.planets.map((p) => ({
           ...p,
           reasoning:
-            planetIdToReason[p.id] ?? contentToReason[normalize(p.content)] ?? null,
+            planetIdToReason[p.id] ??
+            contentToReason[normalize(p.content)] ??
+            null,
           alternatives:
             planetIdToAlternatives[p.id] ??
             contentToAlternatives[normalize(p.content)] ??
@@ -374,7 +390,10 @@ export async function DELETE(req: NextRequest) {
 
   // Validate required fields
   if (!type || !id) {
-    return NextResponse.json({ error: "Type and ID are required" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Type and ID are required" },
+      { status: 400 },
+    );
   }
 
   if (type === "planet") {
@@ -462,9 +481,16 @@ export async function DELETE(req: NextRequest) {
 
     // Attempt to remove from Supabase storage (best-effort)
     try {
-      const { error } = await supabaseAdmin.storage.from(img.bucket).remove([img.objectKey]);
+      const { error } = await supabaseAdmin.storage
+        .from(img.bucket)
+        .remove([img.objectKey]);
       if (error) {
-        console.warn("[storage] remove failed", img.bucket, img.objectKey, error.message);
+        console.warn(
+          "[storage] remove failed",
+          img.bucket,
+          img.objectKey,
+          error.message,
+        );
       }
     } catch (e: any) {
       console.warn("[storage] exception during remove", e?.message || e);
@@ -474,7 +500,10 @@ export async function DELETE(req: NextRequest) {
     try {
       await prisma.image.delete({ where: { id: img.id } });
     } catch (e: any) {
-      return NextResponse.json({ error: "Failed to delete image row" }, { status: 500 });
+      return NextResponse.json(
+        { error: "Failed to delete image row" },
+        { status: 500 },
+      );
     }
   } else {
     return NextResponse.json(
@@ -488,7 +517,7 @@ export async function DELETE(req: NextRequest) {
     where: {
       userId: session.user.id,
       planets: { none: {} },
-      images: { none: {} }
+      images: { none: {} },
     },
   });
 
@@ -617,7 +646,10 @@ export async function POST(req: NextRequest) {
         select: { id: true },
       });
       if (!planet) {
-        return NextResponse.json({ error: "Planet not found" }, { status: 404 });
+        return NextResponse.json(
+          { error: "Planet not found" },
+          { status: 404 },
+        );
       }
     }
 
@@ -745,10 +777,16 @@ export async function POST(req: NextRequest) {
         .from(image.bucket)
         .move(image.objectKey, newKey);
       if (error) {
-        return NextResponse.json({ error: `Move failed: ${error.message}` }, { status: 500 });
+        return NextResponse.json(
+          { error: `Move failed: ${error.message}` },
+          { status: 500 },
+        );
       }
     } catch (e: any) {
-      return NextResponse.json({ error: e?.message || "Move failed" }, { status: 500 });
+      return NextResponse.json(
+        { error: e?.message || "Move failed" },
+        { status: 500 },
+      );
     }
 
     await prisma.$transaction(async (tx) => {
@@ -760,7 +798,9 @@ export async function POST(req: NextRequest) {
       if (existing.length > 0) {
         await tx.image.update({
           where: { id: image.id },
-          data: { galaxies: { disconnect: existing.map((g) => ({ id: g.id })) } },
+          data: {
+            galaxies: { disconnect: existing.map((g) => ({ id: g.id })) },
+          },
         });
       }
       await tx.image.update({
@@ -787,15 +827,27 @@ export async function POST(req: NextRequest) {
       } catch {}
 
       // Clean up any empty folders (excluding target)
-      const candidateIds = existing.map((g) => g.id).filter((id) => id !== folder!.id);
+      const candidateIds = existing
+        .map((g) => g.id)
+        .filter((id) => id !== folder!.id);
       if (candidateIds.length > 0) {
         await tx.galaxy.deleteMany({
-          where: { userId: session.user.id, id: { in: candidateIds }, planets: { none: {} }, images: { none: {} } },
+          where: {
+            userId: session.user.id,
+            id: { in: candidateIds },
+            planets: { none: {} },
+            images: { none: {} },
+          },
         });
       }
     });
 
-    return NextResponse.json({ ok: true, folderId: folder.id, moved: true, newKey });
+    return NextResponse.json({
+      ok: true,
+      folderId: folder.id,
+      moved: true,
+      newKey,
+    });
   } catch (error) {
     console.error("Dashboard POST error:", error);
     return NextResponse.json({ error: "Request failed" }, { status: 500 });

@@ -1,6 +1,11 @@
 "use client";
 
-import { FolderIcon, TrashIcon, PencilIcon, InformationCircleIcon } from "@heroicons/react/24/outline";
+import {
+  FolderIcon,
+  TrashIcon,
+  PencilIcon,
+  InformationCircleIcon,
+} from "@heroicons/react/24/outline";
 import { PlanetItem } from "./planet-item";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -17,7 +22,15 @@ interface Planet {
 interface GalaxyFolderProps {
   id: string;
   name: string;
-  images?: { id: string; signedUrl: string | null; contentType: string; createdAt: string; objectKey?: string; reasoning?: string | null; alternatives?: string[] }[];
+  images?: {
+    id: string;
+    signedUrl: string | null;
+    contentType: string;
+    createdAt: string;
+    objectKey?: string;
+    reasoning?: string | null;
+    alternatives?: string[];
+  }[];
   planets: Planet[];
   planetCount: number;
   onEdit?: (id: string, currentName: string) => void;
@@ -228,7 +241,8 @@ export function GalaxyFolder({
             </div>
           )}
           <div className={styles.cardMeta}>
-            {planetCount + (images?.length || 0)} item{planetCount + (images?.length || 0) !== 1 ? "s" : ""}
+            {planetCount + (images?.length || 0)} item
+            {planetCount + (images?.length || 0) !== 1 ? "s" : ""}
           </div>
         </div>
         {name !== "Orphaned Planets" && (
@@ -250,7 +264,11 @@ export function GalaxyFolder({
         {images.length > 0 ? (
           <div className={styles.imageGrid}>
             {images.map((img) => (
-              <div key={img.id} className={styles.imageItem} data-image-id={img.id}>
+              <div
+                key={img.id}
+                className={styles.imageItem}
+                data-image-id={img.id}
+              >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={img.signedUrl || ""}
@@ -298,21 +316,32 @@ export function GalaxyFolder({
                         alert("No image URL available to copy");
                         return;
                       }
-                      const res = await fetch(img.signedUrl, { cache: "no-store" });
+                      const res = await fetch(img.signedUrl, {
+                        cache: "no-store",
+                      });
                       if (!res.ok) throw new Error("Failed to fetch image");
                       let blob = await res.blob();
-                      const origMime = blob.type || img.contentType || "image/png";
+                      const origMime =
+                        blob.type || img.contentType || "image/png";
 
-                      const canWrite = Boolean((navigator as any)?.clipboard && (navigator.clipboard as any).write && (window as any).ClipboardItem);
+                      const canWrite = Boolean(
+                        (navigator as any)?.clipboard &&
+                          (navigator.clipboard as any).write &&
+                          (window as any).ClipboardItem,
+                      );
                       const supportsType = (type: string) => {
                         const CI: any = (window as any).ClipboardItem;
-                        return typeof CI?.supports === "function" ? CI.supports(type) : (type === "image/png");
+                        return typeof CI?.supports === "function"
+                          ? CI.supports(type)
+                          : type === "image/png";
                       };
 
                       if (canWrite) {
                         try {
                           if (supportsType(origMime)) {
-                            const item = new (window as any).ClipboardItem({ [origMime]: blob });
+                            const item = new (window as any).ClipboardItem({
+                              [origMime]: blob,
+                            });
                             await (navigator.clipboard as any).write([item]);
                             markCopied(img.id);
                             return;
@@ -325,32 +354,50 @@ export function GalaxyFolder({
                             const pngBlob = await (async () => {
                               const url = URL.createObjectURL(blob);
                               try {
-                                const image = await new Promise<HTMLImageElement>((resolve, reject) => {
-                                  const im = new Image();
-                                  im.onload = () => resolve(im);
-                                  im.onerror = reject as any;
-                                  im.crossOrigin = "anonymous";
-                                  im.src = url;
-                                });
+                                const image =
+                                  await new Promise<HTMLImageElement>(
+                                    (resolve, reject) => {
+                                      const im = new Image();
+                                      im.onload = () => resolve(im);
+                                      im.onerror = reject as any;
+                                      im.crossOrigin = "anonymous";
+                                      im.src = url;
+                                    },
+                                  );
                                 const canvas = document.createElement("canvas");
-                                canvas.width = image.naturalWidth || image.width;
-                                canvas.height = image.naturalHeight || image.height;
+                                canvas.width =
+                                  image.naturalWidth || image.width;
+                                canvas.height =
+                                  image.naturalHeight || image.height;
                                 const ctx = canvas.getContext("2d");
-                                if (!ctx) throw new Error("Canvas 2D not available");
+                                if (!ctx)
+                                  throw new Error("Canvas 2D not available");
                                 ctx.drawImage(image, 0, 0);
-                                return await new Promise<Blob>((resolve, reject) =>
-                                  canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("toBlob failed"))), "image/png")
+                                return await new Promise<Blob>(
+                                  (resolve, reject) =>
+                                    canvas.toBlob(
+                                      (b) =>
+                                        b
+                                          ? resolve(b)
+                                          : reject(new Error("toBlob failed")),
+                                      "image/png",
+                                    ),
                                 );
                               } finally {
                                 URL.revokeObjectURL(url);
                               }
                             })();
-                            const item = new (window as any).ClipboardItem({ ["image/png"]: pngBlob });
+                            const item = new (window as any).ClipboardItem({
+                              ["image/png"]: pngBlob,
+                            });
                             await (navigator.clipboard as any).write([item]);
                             markCopied(img.id);
                             return;
                           } catch (err) {
-                            console.warn("PNG fallback failed, copying URL instead", err);
+                            console.warn(
+                              "PNG fallback failed, copying URL instead",
+                              err,
+                            );
                           }
                         }
 
@@ -379,7 +426,11 @@ export function GalaxyFolder({
                   {copiedId === img.id ? "✓" : "⧉"}
                 </button>
                 {/* Info button for AI reasoning/alternatives */}
-                <ImageInfoButton imageId={img.id} reasoning={img.reasoning ?? null} alternatives={img.alternatives ?? []} />
+                <ImageInfoButton
+                  imageId={img.id}
+                  reasoning={img.reasoning ?? null}
+                  alternatives={img.alternatives ?? []}
+                />
               </div>
             ))}
           </div>
@@ -408,7 +459,10 @@ export function GalaxyFolder({
 
       {lightboxUrl
         ? createPortal(
-            <div className={styles.lightboxOverlay} onClick={() => setLightboxUrl(null)}>
+            <div
+              className={styles.lightboxOverlay}
+              onClick={() => setLightboxUrl(null)}
+            >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={lightboxUrl}
@@ -426,10 +480,21 @@ export function GalaxyFolder({
 
 export default GalaxyFolder;
 
-function ImageInfoButton({ imageId, reasoning, alternatives }: { imageId: string; reasoning: string | null; alternatives: string[] }) {
+function ImageInfoButton({
+  imageId,
+  reasoning,
+  alternatives,
+}: {
+  imageId: string;
+  reasoning: string | null;
+  alternatives: string[];
+}) {
   const [open, setOpen] = useState(false);
   const btnRef = useRef<HTMLButtonElement | null>(null);
-  const [bubblePos, setBubblePos] = useState<{ x: number; align: "top" | "bottom" } | null>(null);
+  const [bubblePos, setBubblePos] = useState<{
+    x: number;
+    align: "top" | "bottom";
+  } | null>(null);
 
   useEffect(() => {
     function onDoc(e: MouseEvent) {
@@ -459,8 +524,12 @@ function ImageInfoButton({ imageId, reasoning, alternatives }: { imageId: string
     const margin = 12;
     const vw = window.innerWidth;
     const spaceAbove = rect.top;
-    const align: "top" | "bottom" = spaceAbove >= estimatedBubbleHeight + margin ? "top" : "bottom";
-    const x = Math.min(Math.max(rect.right - bubbleWidth, margin), vw - bubbleWidth - margin);
+    const align: "top" | "bottom" =
+      spaceAbove >= estimatedBubbleHeight + margin ? "top" : "bottom";
+    const x = Math.min(
+      Math.max(rect.right - bubbleWidth, margin),
+      vw - bubbleWidth - margin,
+    );
     setBubblePos({ x, align });
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
@@ -482,7 +551,10 @@ function ImageInfoButton({ imageId, reasoning, alternatives }: { imageId: string
       </button>
       {open && bubblePos && typeof document !== "undefined"
         ? createPortal(
-            <div className={styles.infoOverlay} style={{ position: "fixed", inset: 0, zIndex: 9998 }}>
+            <div
+              className={styles.infoOverlay}
+              style={{ position: "fixed", inset: 0, zIndex: 9998 }}
+            >
               <div
                 className={styles.infoBubble}
                 role="dialog"
@@ -492,20 +564,33 @@ function ImageInfoButton({ imageId, reasoning, alternatives }: { imageId: string
                   position: "fixed",
                   left: `${bubblePos.x}px`,
                   ...(bubblePos.align === "top"
-                    ? { bottom: `${window.innerHeight - (btnRef.current?.getBoundingClientRect().top ?? 0) + 12}px` }
-                    : { top: `${(btnRef.current?.getBoundingClientRect().bottom ?? 0) + 12}px` }),
+                    ? {
+                        bottom: `${window.innerHeight - (btnRef.current?.getBoundingClientRect().top ?? 0) + 12}px`,
+                      }
+                    : {
+                        top: `${(btnRef.current?.getBoundingClientRect().bottom ?? 0) + 12}px`,
+                      }),
                 }}
               >
                 <div className={styles.infoSection}>
                   <div className={styles.infoSectionTitle}>Reasoning</div>
-                  <div className={styles.infoSectionBody}>{reasoning || "no context"}</div>
+                  <div className={styles.infoSectionBody}>
+                    {reasoning || "no context"}
+                  </div>
                 </div>
                 {alternatives && alternatives.length > 0 ? (
                   <div className={styles.infoSection}>
-                    <div className={styles.infoSectionTitle}>Alternative names</div>
+                    <div className={styles.infoSectionTitle}>
+                      Alternative names
+                    </div>
                     <div className={styles.infoAltButtons}>
                       {alternatives.slice(0, 10).map((alt, idx) => (
-                        <AltFolderButton key={idx} imageId={imageId} alt={alt} onDone={() => setOpen(false)} />
+                        <AltFolderButton
+                          key={idx}
+                          imageId={imageId}
+                          alt={alt}
+                          onDone={() => setOpen(false)}
+                        />
                       ))}
                     </div>
                   </div>
@@ -519,7 +604,15 @@ function ImageInfoButton({ imageId, reasoning, alternatives }: { imageId: string
   );
 }
 
-function AltFolderButton({ imageId, alt, onDone }: { imageId: string; alt: string; onDone: () => void }) {
+function AltFolderButton({
+  imageId,
+  alt,
+  onDone,
+}: {
+  imageId: string;
+  alt: string;
+  onDone: () => void;
+}) {
   const [loading, setLoading] = useState(false);
   async function handleClick(e: React.MouseEvent) {
     e.stopPropagation();
@@ -528,7 +621,11 @@ function AltFolderButton({ imageId, alt, onDone }: { imageId: string; alt: strin
       const res = await fetch("/api/dashboard", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "attachImageToFolder", imageId, folderName: alt }),
+        body: JSON.stringify({
+          action: "attachImageToFolder",
+          imageId,
+          folderName: alt,
+        }),
       });
       if (!res.ok) return;
       onDone();
@@ -538,7 +635,13 @@ function AltFolderButton({ imageId, alt, onDone }: { imageId: string; alt: strin
     }
   }
   return (
-    <button type="button" className={styles.altBtn} title={alt} onClick={handleClick} disabled={loading}>
+    <button
+      type="button"
+      className={styles.altBtn}
+      title={alt}
+      onClick={handleClick}
+      disabled={loading}
+    >
       {loading ? "Adding…" : alt}
     </button>
   );

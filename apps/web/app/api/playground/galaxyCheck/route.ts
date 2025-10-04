@@ -17,7 +17,9 @@ export async function POST(req: NextRequest) {
   }
 
   // Ensure user exists (avoids FK violations after DB resets)
-  const dbUser = await prisma.user.findUnique({ where: { id: session.user.id } });
+  const dbUser = await prisma.user.findUnique({
+    where: { id: session.user.id },
+  });
   if (!dbUser) {
     return NextResponse.json(
       { error: "Session invalid. Please sign in again." },

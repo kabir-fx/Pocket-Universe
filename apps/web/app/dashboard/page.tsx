@@ -16,7 +16,12 @@ interface Planet {
 interface Galaxy {
   id: string;
   name: string;
-  images?: { id: string; signedUrl: string | null; contentType: string; createdAt: string }[];
+  images?: {
+    id: string;
+    signedUrl: string | null;
+    contentType: string;
+    createdAt: string;
+  }[];
   planets: Planet[];
   _count: { planets: number };
 }

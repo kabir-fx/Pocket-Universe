@@ -49,11 +49,13 @@ export function PlgCard({
   const [isTypingGalaxy, setIsTypingGalaxy] = useState(false);
   const [showGalaxyDropdown, setShowGalaxyDropdown] = useState(false);
   const [newGalaxyName, setNewGalaxyName] = useState("");
-  const [pastedImageDataUrl, setPastedImageDataUrl] = useState<string | null>(null);
+  const [pastedImageDataUrl, setPastedImageDataUrl] = useState<string | null>(
+    null,
+  );
   const [isDragActive, setIsDragActive] = useState(false);
   const isImageMode = !!pastedImageDataUrl;
   const filteredGalaxies = (galaxies || []).filter(
-    (g) => g.id !== "orphaned-planets" && g.name !== "Orphaned Planets"
+    (g) => g.id !== "orphaned-planets" && g.name !== "Orphaned Planets",
   );
 
   const clearForm = () => {
@@ -91,35 +93,42 @@ export function PlgCard({
     });
   }, [submitting, onSubmit, galaxy, planet, pastedImageDataUrl]);
 
-  const handlePaste = useCallback((e: React.ClipboardEvent<HTMLInputElement>) => {
-    try {
-      const items = e.clipboardData?.items || [];
-      for (let i = 0; i < items.length; i++) {
-        const item = items[i];
-        if (item && item.type && item.type.startsWith("image/")) {
-          const file = item.getAsFile();
-          if (file) {
-            e.preventDefault();
-            const reader = new FileReader();
-            reader.onload = async () => {
-              const result = reader.result;
-              if (typeof result === "string") {
-                const optimized = await maybeDownscaleDataUrl(result, 1600, 0.85);
-                setPastedImageDataUrl(optimized);
-                // Clear any text content to reflect image mode
-                setPlanet("");
-              }
-            };
-            reader.readAsDataURL(file);
-            return;
+  const handlePaste = useCallback(
+    (e: React.ClipboardEvent<HTMLInputElement>) => {
+      try {
+        const items = e.clipboardData?.items || [];
+        for (let i = 0; i < items.length; i++) {
+          const item = items[i];
+          if (item && item.type && item.type.startsWith("image/")) {
+            const file = item.getAsFile();
+            if (file) {
+              e.preventDefault();
+              const reader = new FileReader();
+              reader.onload = async () => {
+                const result = reader.result;
+                if (typeof result === "string") {
+                  const optimized = await maybeDownscaleDataUrl(
+                    result,
+                    1600,
+                    0.85,
+                  );
+                  setPastedImageDataUrl(optimized);
+                  // Clear any text content to reflect image mode
+                  setPlanet("");
+                }
+              };
+              reader.readAsDataURL(file);
+              return;
+            }
           }
         }
+        // If no image found, allow normal paste of text
+      } catch {
+        // ignore
       }
-      // If no image found, allow normal paste of text
-    } catch {
-      // ignore
-    }
-  }, []);
+    },
+    [],
+  );
 
   const clearPastedImage = useCallback(() => setPastedImageDataUrl(null), []);
 
@@ -161,7 +170,8 @@ export function PlgCard({
       for (let i = 0; i < items.length; i++) {
         const it = items[i] as DataTransferItem | undefined;
         if (!it) continue;
-        if (it.kind === "file" && it.type && it.type.startsWith("image/")) return true;
+        if (it.kind === "file" && it.type && it.type.startsWith("image/"))
+          return true;
       }
       return false;
     } catch {
@@ -214,7 +224,11 @@ export function PlgCard({
     }
   };
 
-  async function maybeDownscaleDataUrl(dataUrl: string, maxDim: number, quality: number): Promise<string> {
+  async function maybeDownscaleDataUrl(
+    dataUrl: string,
+    maxDim: number,
+    quality: number,
+  ): Promise<string> {
     try {
       const img = new Image();
       const done: Promise<string> = new Promise((resolve) => {
@@ -230,8 +244,13 @@ export function PlgCard({
           const ctx = canvas.getContext("2d");
           if (!ctx) return resolve(dataUrl);
           ctx.drawImage(img, 0, 0, dstW, dstH);
-          const mime = dataUrl.startsWith("data:image/png") ? "image/png" : "image/jpeg";
-          const out = canvas.toDataURL(mime, mime === "image/png" ? undefined : quality);
+          const mime = dataUrl.startsWith("data:image/png")
+            ? "image/png"
+            : "image/jpeg";
+          const out = canvas.toDataURL(
+            mime,
+            mime === "image/png" ? undefined : quality,
+          );
           resolve(out);
         };
         img.onerror = () => resolve(dataUrl);
@@ -379,15 +398,26 @@ export function PlgCard({
               <div className={styles.dropArea} aria-label="Drop image here">
                 <div className={styles.dropInner}>
                   <span className={styles.dropTitle}>Drop image to attach</span>
-                  <span className={styles.dropSub}>PNG or JPG up to a few MB</span>
+                  <span className={styles.dropSub}>
+                    PNG or JPG up to a few MB
+                  </span>
                 </div>
               </div>
             ) : isImageMode ? (
               <div className={styles.largePreviewWrap}>
                 <div className={styles.largePreviewFrame}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={pastedImageDataUrl as string} alt="Preview" className={styles.largePreviewImg} />
-                  <button type="button" aria-label="Close image" className={styles.closeBtn} onClick={clearPastedImage}>
+                  <img
+                    src={pastedImageDataUrl as string}
+                    alt="Preview"
+                    className={styles.largePreviewImg}
+                  />
+                  <button
+                    type="button"
+                    aria-label="Close image"
+                    className={styles.closeBtn}
+                    onClick={clearPastedImage}
+                  >
                     ×
                   </button>
                 </div>
@@ -480,10 +510,10 @@ export function PlgCard({
                       )}
                     </div>
                     <div className={styles.galaxyList}>
-                    {filteredGalaxies.length === 0 ? (
+                      {filteredGalaxies.length === 0 ? (
                         <div className={styles.empty}>No galaxies yet</div>
                       ) : (
-                      filteredGalaxies.map((g) => (
+                        filteredGalaxies.map((g) => (
                           <button
                             key={g.id}
                             type="button"
@@ -546,7 +576,9 @@ export function PlgCard({
             <div className={styles.dropArea} aria-label="Drop image here">
               <div className={styles.dropInner}>
                 <span className={styles.dropTitle}>Drop image to attach</span>
-                <span className={styles.dropSub}>PNG or JPG up to a few MB</span>
+                <span className={styles.dropSub}>
+                  PNG or JPG up to a few MB
+                </span>
               </div>
             </div>
           </div>

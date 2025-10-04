@@ -38,7 +38,8 @@ export interface ImageAnalysis {
 }
 
 function buildImageCategorizationPrompt(a: ImageAnalysis): string {
-  let prompt = `You are classifying an image into a concise user folder name.\n` +
+  let prompt =
+    `You are classifying an image into a concise user folder name.\n` +
     `Rules:\n` +
     `- Return JSON only with keys: category (string), confidence (0..1), reasoning (<=200 chars), alternatives (3-4 plausible names).\n` +
     `- Prefer an existing folder name when semantically appropriate.\n`;
@@ -46,9 +47,15 @@ function buildImageCategorizationPrompt(a: ImageAnalysis): string {
     prompt += `Existing folders: ${a.existingFolders.join(", ")}\n`;
   }
   if (a.userCorrections && a.userCorrections.length > 0) {
-    prompt += `User past overrides:\n` + a.userCorrections.map(
-      (c) => `content:"${c.originalContent.substring(0, 50)}..." → suggested:"${c.suggestedFolder}" → user:"${c.acceptedFolder}"`,
-    ).join("\n") + "\n";
+    prompt +=
+      `User past overrides:\n` +
+      a.userCorrections
+        .map(
+          (c) =>
+            `content:"${c.originalContent.substring(0, 50)}..." → suggested:"${c.suggestedFolder}" → user:"${c.acceptedFolder}"`,
+        )
+        .join("\n") +
+      "\n";
   }
   if (a.filename) {
     prompt += `Filename hint: ${a.filename}\n`;
@@ -57,7 +64,9 @@ function buildImageCategorizationPrompt(a: ImageAnalysis): string {
   return prompt;
 }
 
-export async function categorizeImage(analysis: ImageAnalysis): Promise<CategorizationResult> {
+export async function categorizeImage(
+  analysis: ImageAnalysis,
+): Promise<CategorizationResult> {
   const model = getGeminiModel();
   const prompt = buildImageCategorizationPrompt(analysis);
 

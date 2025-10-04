@@ -76,8 +76,8 @@ function Homeer() {
       const asDataUrl = imgDataUrl?.trim()
         ? imgDataUrl.trim()
         : isDataUrl(planet)
-        ? planet
-        : null;
+          ? planet
+          : null;
       const asUrl = !asDataUrl && planet ? isLikelyImageUrl(planet) : null;
 
       if (asDataUrl || asUrl) {
@@ -86,9 +86,7 @@ function Homeer() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             galaxy: galaxy && galaxy.trim() ? galaxy.trim() : undefined,
-            img: asDataUrl
-              ? { dataUrl: asDataUrl }
-              : { url: asUrl },
+            img: asDataUrl ? { dataUrl: asDataUrl } : { url: asUrl },
           }),
         });
 
@@ -179,9 +177,20 @@ function Homeer() {
     try {
       const u = new URL(url);
       const path = u.pathname.toLowerCase();
-      if (path.endsWith(".png") || path.endsWith(".jpg") || path.endsWith(".jpeg")) return url;
+      if (
+        path.endsWith(".png") ||
+        path.endsWith(".jpg") ||
+        path.endsWith(".jpeg")
+      )
+        return url;
       const q = u.search.toLowerCase();
-      if (q.includes("format=png") || q.includes("format=jpg") || q.includes("format=jpe") || q.includes("image")) return url;
+      if (
+        q.includes("format=png") ||
+        q.includes("format=jpg") ||
+        q.includes("format=jpe") ||
+        q.includes("image")
+      )
+        return url;
       return null;
     } catch {
       return null;
@@ -190,54 +199,57 @@ function Homeer() {
 
   return (
     <>
-    <PlgCard
-      title="Create Your Universe"
-      subtitle="Build customizable folders to organize your links and ideas"
-      submitting={submitting}
-      errorMsg={errorMsg ?? (errorParam ? "Invalid input" : null)}
-      successMsg={successMsg}
-      galaxies={galaxies}
-      backgroundColor="transparent"
-      cardBackgroundColor="transparent"
-      showShadows={false}
-      onSubmit={handleSubmit}
-      onAiSubmit={async ({ planet, onSuccess }) => {
-        setSubmitting(true);
-        setErrorMsg(null);
-        setSuccessMsg(null);
-        try {
-          // Decide whether this is an image categorization or text
-          const asDataUrl = planet && isDataUrl(planet) ? planet : null;
-          const asUrl = !asDataUrl && planet ? isLikelyImageUrl(planet) : null;
+      <PlgCard
+        title="Create Your Universe"
+        subtitle="Build customizable folders to organize your links and ideas"
+        submitting={submitting}
+        errorMsg={errorMsg ?? (errorParam ? "Invalid input" : null)}
+        successMsg={successMsg}
+        galaxies={galaxies}
+        backgroundColor="transparent"
+        cardBackgroundColor="transparent"
+        showShadows={false}
+        onSubmit={handleSubmit}
+        onAiSubmit={async ({ planet, onSuccess }) => {
+          setSubmitting(true);
+          setErrorMsg(null);
+          setSuccessMsg(null);
+          try {
+            // Decide whether this is an image categorization or text
+            const asDataUrl = planet && isDataUrl(planet) ? planet : null;
+            const asUrl =
+              !asDataUrl && planet ? isLikelyImageUrl(planet) : null;
 
-          const payload = asDataUrl
-            ? { type: "image", data: { dataUrl: asDataUrl } }
-            : asUrl
-            ? { type: "image", data: { url: asUrl } }
-            : { type: "text", data: { content: planet || "" } };
+            const payload = asDataUrl
+              ? { type: "image", data: { dataUrl: asDataUrl } }
+              : asUrl
+                ? { type: "image", data: { url: asUrl } }
+                : { type: "text", data: { content: planet || "" } };
 
-          const res = await fetch("/api/ai/pipeline", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          });
-          const body = await res.json().catch(() => null);
-          if (!res.ok) {
-            if (res.status === 401) {
-              setErrorMsg("Please sign in to continue.");
-            } else {
-              setErrorMsg(body?.error || "AI pipeline failed");
+            const res = await fetch("/api/ai/pipeline", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload),
+            });
+            const body = await res.json().catch(() => null);
+            if (!res.ok) {
+              if (res.status === 401) {
+                setErrorMsg("Please sign in to continue.");
+              } else {
+                setErrorMsg(body?.error || "AI pipeline failed");
+              }
+              return;
             }
-            return;
+            setSuccessMsg(
+              "Saved with AI! You can review it on your dashboard anytime.",
+            );
+            await fetchGalaxies();
+            if (onSuccess) onSuccess();
+          } finally {
+            setSubmitting(false);
           }
-          setSuccessMsg("Saved with AI! You can review it on your dashboard anytime.");
-          await fetchGalaxies();
-          if (onSuccess) onSuccess();
-        } finally {
-          setSubmitting(false);
-        }
-      }}
-    />
+        }}
+      />
     </>
   );
 }

@@ -14,11 +14,14 @@ export async function POST(req: NextRequest) {
     data: {
       userId: session.user.id,
       content: planet,
-      ...(galaxy && galaxy.trim() && {
-        galaxies: {
-          connect: { userId_name: { userId: session.user.id, name: galaxy.trim() } },
-        },
-      }),
+      ...(galaxy &&
+        galaxy.trim() && {
+          galaxies: {
+            connect: {
+              userId_name: { userId: session.user.id, name: galaxy.trim() },
+            },
+          },
+        }),
     },
   });
 
