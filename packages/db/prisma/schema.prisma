@@ -30,6 +30,8 @@ model User {
 
   images Image[]
 
+  documents Document[]
+
   aiSlop AICategorization[]
 
   createdAt DateTime @default(now())
@@ -84,6 +86,8 @@ model Galaxy {
 
   images Image[]
 
+  documents Document[]
+
   @@unique([userId, name])
 }
 
@@ -118,11 +122,11 @@ model AICategorization {
 }
 
 model Image {
-  id             String    @id @default(cuid())
-  userId         String
-  user           User      @relation(fields: [userId], references: [id])
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
 
-  galaxies       Galaxy[]
+  galaxies Galaxy[]
 
   bucket         String
   objectKey      String
@@ -134,6 +138,29 @@ model Image {
   isPublic       Boolean   @default(false)
   createdAt      DateTime  @default(now())
   deletedAt      DateTime?
+
+  @@unique([userId, objectKey])
+  @@index([userId])
+  @@index([bucket, objectKey])
+}
+
+model Document {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  galaxies Galaxy[]
+
+  bucket         String
+  objectKey      String
+  contentType    String // "application/pdf"
+  sizeBytes      BigInt
+  checksumSha256 String?
+  pageCount      Int? // optional
+
+  isPublic  Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  deletedAt DateTime?
 
   @@unique([userId, objectKey])
   @@index([userId])

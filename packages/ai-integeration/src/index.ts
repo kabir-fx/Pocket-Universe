@@ -1,4 +1,5 @@
 import { getGeminiModel } from "./gemini_client";
+import { GoogleAIFileManager } from "@google/generative-ai/server";
 
 export interface CategorizationResult {
   suggestedFolder: string;
@@ -29,6 +30,60 @@ export interface ImageAnalysis {
     acceptedFolder: string;
   }>;
   filename?: string;
+}
+
+export interface PdfAnalysis {
+  bytes: Buffer; // raw PDF bytes
+  userId: string;
+  filename?: string;
+  existingFolders: string[];
+  userCorrections?: Array<{
+    originalContent: string;
+    suggestedFolder: string;
+    acceptedFolder: string;
+  }>;
+}
+
+function buildPdfPrompt(a: PdfAnalysis) {
+  let p = `You are classifying this PDF into a concise user folder name.
+Rules:
+- Return JSON only with keys: category, confidence (0..1), reasoning (<=200 chars), alternatives (3-4).
+- Prefer an existing folder name when appropriate.
+`;
+  if (a.existingFolders?.length)
+    p += `Existing folders: ${a.existingFolders.join(", ")}\n`;
+  if (a.userCorrections?.length) {
+    p += `User past overrides:\n${a.userCorrections
+      .map(
+        (c) =>
+          `content:"${c.originalContent.slice(0, 50)}..." → suggested:"${c.suggestedFolder}" → user:"${c.acceptedFolder}"`,
+      )
+      .join("\n")}\n`;
+  }
+  if (a.filename) p += `Filename hint: ${a.filename}\n`;
+  p += `Return JSON only.`;
+  return p;
+}
+
+export async function categorizePdf(
+  a: PdfAnalysis,
+): Promise<CategorizationResult> {
+  const model = getGeminiModel();
+  const fileManager = new GoogleAIFileManager(process.env.GEMINI_API_KEY!);
+
+  // Upload PDF to Gemini Files API
+  const upload = await fileManager.uploadFile(a.bytes, {
+    mimeType: "application/pdf",
+    displayName: a.filename ?? "document.pdf",
+  });
+
+  // Use fileData per Gemini docs
+  const res = await model.generateContent([
+    { fileData: { fileUri: upload.file.uri, mimeType: "application/pdf" } },
+    { text: buildPdfPrompt(a) },
+  ]);
+  const text = await res.response.text();
+  return parseJsonResponse(text);
 }
 
 function buildImageCategorizationPrompt(a: ImageAnalysis): string {

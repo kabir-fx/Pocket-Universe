@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import styles from "./playground-card.module.css";
 import {
   FolderIcon,
@@ -29,6 +29,11 @@ export interface PlgCardProps {
     planet: string;
     onSuccess?: () => void;
   }) => Promise<void> | void;
+  onPdfUpload?: (args: {
+    file: File;
+    galaxy?: string;
+    onSuccess?: () => void;
+  }) => Promise<void> | void;
 }
 
 export function PlgCard({
@@ -43,6 +48,7 @@ export function PlgCard({
   showShadows = true,
   onSubmit,
   onAiSubmit,
+  onPdfUpload,
 }: PlgCardProps) {
   const [galaxy, setGalaxy] = useState("");
   const [planet, setPlanet] = useState("");
@@ -57,6 +63,8 @@ export function PlgCard({
   const filteredGalaxies = (galaxies || []).filter(
     (g) => g.id !== "orphaned-planets" && g.name !== "Orphaned Planets",
   );
+
+  const pdfInputRef = useRef<HTMLInputElement | null>(null);
 
   const clearForm = () => {
     setGalaxy("");
@@ -223,6 +231,26 @@ export function PlgCard({
       // ignore
     }
   };
+
+  const onPdfChange = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      try {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        if (onPdfUpload) {
+          await onPdfUpload({
+            file,
+            galaxy: galaxy || undefined,
+            onSuccess: clearForm,
+          });
+        }
+      } finally {
+        // reset input so selecting the same file again still triggers change
+        if (e.target) e.target.value = "";
+      }
+    },
+    [onPdfUpload, galaxy],
+  );
 
   async function maybeDownscaleDataUrl(
     dataUrl: string,
@@ -435,6 +463,28 @@ export function PlgCard({
                 required
               />
             )}
+            {onPdfUpload && !isImageMode ? (
+              <>
+                <input
+                  ref={pdfInputRef}
+                  type="file"
+                  accept="application/pdf"
+                  style={{ display: "none" }}
+                  onChange={onPdfChange}
+                />
+                <button
+                  type="button"
+                  disabled={submitting}
+                  className={styles.createButton}
+                  data-submitting={submitting}
+                  onClick={() => pdfInputRef.current?.click()}
+                  aria-label="Upload PDF"
+                  title="Upload PDF"
+                >
+                  Upload PDF
+                </button>
+              </>
+            ) : null}
             {onAiSubmit && !isImageMode ? (
               <button
                 type="button"

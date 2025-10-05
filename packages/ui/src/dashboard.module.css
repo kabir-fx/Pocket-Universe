@@ -241,6 +241,13 @@
   transform: translateY(0);
 }
 
+.imageItem:hover .docCopyBtn,
+.imageItem:hover .docDeleteBtn,
+.imageItem:hover .docInfoWrap {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 .imageDeleteBtn {
   position: absolute;
   top: 6px;
@@ -275,6 +282,50 @@
   cursor: zoom-in;
 }
 
+/* PDF/doc placeholder styled to match image tiles in size */
+.docThumb {
+  width: 100%;
+  height: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  background: linear-gradient(180deg, #0b0d12 0%, #131722 100%);
+}
+
+.docIconWrap {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  background: radial-gradient(120% 120% at 50% 0%, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.06);
+}
+
+.docIcon {
+  width: 34px;
+  height: 34px;
+  color: #e5e7eb;
+}
+
+.docBadge {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .4px;
+  color: #0b0d12;
+  background: linear-gradient(180deg, #f43f5e, #ef4444);
+  border: 1px solid rgba(0,0,0,0.28);
+  box-shadow: 0 2px 6px rgba(239,68,68,0.35);
+}
+
 .imageCopyBtn {
   position: absolute;
   top: 36px;
@@ -294,6 +345,74 @@
   transition: all .18s ease;
   opacity: 0;
   transform: translateY(-6px);
+}
+
+/* Document controls mimic image controls */
+.docDeleteBtn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(0,0,0,0.55);
+  color: #fff;
+  font-weight: 700;
+  line-height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all .18s ease;
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
+.docDeleteBtn:hover {
+  background: rgba(239,68,68,0.9);
+  border-color: rgba(239,68,68,0.9);
+}
+
+.docCopyBtn {
+  position: absolute;
+  top: 36px;
+  right: 6px;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(0,0,0,0.55);
+  color: #fff;
+  font-weight: 700;
+  line-height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all .18s ease;
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
+.docCopyBtn:hover {
+  background: rgba(59,130,246,0.9);
+  border-color: rgba(59,130,246,0.9);
+}
+
+.docCopied {
+  background: rgba(16,185,129,0.92) !important;
+  border-color: rgba(16,185,129,0.92) !important;
+  color: #fff !important;
+}
+
+.docInfoWrap {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: all .18s ease;
 }
 
 .imageItem:hover .imageCopyBtn {

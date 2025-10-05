@@ -28,6 +28,17 @@ export async function GET() {
         orderBy: { createdAt: "desc" },
         take: 12,
       },
+      documents: {
+        select: {
+          id: true,
+          bucket: true,
+          objectKey: true,
+          contentType: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: "desc" },
+        take: 12,
+      },
       planets: {
         select: {
           id: true,
@@ -74,6 +85,22 @@ export async function GET() {
     orderBy: { createdAt: "desc" },
   });
 
+  // Orphaned documents (no folder)
+  const orphanedDocuments = await prisma.document.findMany({
+    where: {
+      userId: session.user.id,
+      galaxies: { none: {} },
+    },
+    select: {
+      id: true,
+      bucket: true,
+      objectKey: true,
+      contentType: true,
+      createdAt: true,
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
   const planetIdToReason: Record<string, string> = {};
   const contentToReason: Record<string, string> = {};
   const planetIdToAlternatives: Record<string, string[]> = {};
@@ -82,6 +109,8 @@ export async function GET() {
   // For images, map objectKey => reasoning/alternatives when available
   const imageKeyToReason: Record<string, string> = {};
   const imageKeyToAlternatives: Record<string, string[]> = {};
+  const docKeyToReason: Record<string, string> = {};
+  const docKeyToAlternatives: Record<string, string[]> = {};
   const normalize = (s: string) => s.trim().replace(/\s+/g, " ").slice(0, 500);
   try {
     const anyPrisma: any = prisma as any;
@@ -144,6 +173,21 @@ export async function GET() {
               imageKeyToReason[key] = r.reasoning as string;
             if (Array.isArray(r?.alternatives))
               imageKeyToAlternatives[key] = (r.alternatives as string[]).filter(
+                (x) => typeof x === "string",
+              );
+          }
+        }
+        // Document enrichment: expect contentPreview like "[pdf] <objectKey>"
+        if (
+          typeof r?.contentPreview === "string" &&
+          r.contentPreview.startsWith("[pdf] ")
+        ) {
+          const key = r.contentPreview.slice("[pdf] ".length).trim();
+          if (key) {
+            if (typeof r?.reasoning === "string")
+              docKeyToReason[key] = r.reasoning as string;
+            if (Array.isArray(r?.alternatives))
+              docKeyToAlternatives[key] = (r.alternatives as string[]).filter(
                 (x) => typeof x === "string",
               );
           }
@@ -250,6 +294,20 @@ export async function GET() {
               );
           }
         }
+        if (
+          typeof r?.contentPreview === "string" &&
+          r.contentPreview.startsWith("[pdf] ")
+        ) {
+          const key = r.contentPreview.slice("[pdf] ".length).trim();
+          if (key) {
+            if (typeof r?.reasoning === "string")
+              docKeyToReason[key] = r.reasoning as string;
+            if (Array.isArray(r?.alternatives))
+              docKeyToAlternatives[key] = (r.alternatives as string[]).filter(
+                (x) => typeof x === "string",
+              );
+          }
+        }
       }
 
       function findReasonFor(content: string): string | undefined {
@@ -318,9 +376,32 @@ export async function GET() {
           }
         }),
       );
+      const signedDocs = await Promise.all(
+        (g as any).documents.map(async (doc: any) => {
+          try {
+            const res = await supabaseAdmin.storage
+              .from(doc.bucket)
+              .createSignedUrl(doc.objectKey, 60 * 60);
+            return {
+              ...doc,
+              signedUrl: res.data?.signedUrl || null,
+              reasoning: docKeyToReason[doc.objectKey] ?? null,
+              alternatives: docKeyToAlternatives[doc.objectKey] ?? [],
+            };
+          } catch {
+            return {
+              ...doc,
+              signedUrl: null,
+              reasoning: null,
+              alternatives: [],
+            };
+          }
+        }),
+      );
       return {
         ...g,
         images: signedImages,
+        documents: signedDocs,
         planets: g.planets.map((p) => ({
           ...p,
           reasoning:
@@ -364,6 +445,24 @@ export async function GET() {
     }),
   );
 
+  const orphanedSignedDocs = await Promise.all(
+    orphanedDocuments.map(async (doc: any) => {
+      try {
+        const res = await supabaseAdmin.storage
+          .from(doc.bucket)
+          .createSignedUrl(doc.objectKey, 60 * 60);
+        return {
+          ...doc,
+          signedUrl: res.data?.signedUrl || null,
+          reasoning: docKeyToReason[doc.objectKey] ?? null,
+          alternatives: docKeyToAlternatives[doc.objectKey] ?? [],
+        };
+      } catch {
+        return { ...doc, signedUrl: null, reasoning: null, alternatives: [] };
+      }
+    }),
+  );
+
   // Always show virtual galaxy for adding new folder names
   const result: any[] = [...enrichedGalaxies];
 
@@ -372,6 +471,7 @@ export async function GET() {
     id: "orphaned-planets", // Virtual ID
     name: "Orphaned Planets",
     images: orphanedSignedImages,
+    documents: orphanedSignedDocs,
     planets: enrichedOrphaned.length > 0 ? enrichedOrphaned : [],
     _count: { planets: enrichedOrphaned.length },
     isVirtual: true,
@@ -505,6 +605,46 @@ export async function DELETE(req: NextRequest) {
         { status: 500 },
       );
     }
+  } else if (type === "document") {
+    // Look up document first to get storage path and verify ownership
+    const doc = await prisma.document.findFirst({
+      where: { id, userId: session.user.id },
+      select: { id: true, bucket: true, objectKey: true },
+    });
+
+    if (!doc) {
+      return NextResponse.json(
+        { error: "Document not found or already deleted" },
+        { status: 404 },
+      );
+    }
+
+    // Attempt to remove from Supabase storage (best-effort)
+    try {
+      const { error } = await supabaseAdmin.storage
+        .from(doc.bucket)
+        .remove([doc.objectKey]);
+      if (error) {
+        console.warn(
+          "[storage] remove failed",
+          doc.bucket,
+          doc.objectKey,
+          error.message,
+        );
+      }
+    } catch (e: any) {
+      console.warn("[storage] exception during remove", e?.message || e);
+    }
+
+    // Remove DB row
+    try {
+      await prisma.document.delete({ where: { id: doc.id } });
+    } catch (e: any) {
+      return NextResponse.json(
+        { error: "Failed to delete document row" },
+        { status: 500 },
+      );
+    }
   } else {
     return NextResponse.json(
       { error: "Invalid type. Must be 'planet' or 'folder'" },
@@ -518,6 +658,7 @@ export async function DELETE(req: NextRequest) {
       userId: session.user.id,
       planets: { none: {} },
       images: { none: {} },
+      documents: { none: {} },
     },
   });
 

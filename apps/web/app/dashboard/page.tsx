@@ -22,6 +22,12 @@ interface Galaxy {
     contentType: string;
     createdAt: string;
   }[];
+  documents?: {
+    id: string;
+    signedUrl: string | null;
+    contentType: string;
+    createdAt: string;
+  }[];
   planets: Planet[];
   _count: { planets: number };
 }
@@ -176,6 +182,7 @@ function Dashboard() {
           id={galaxy.id}
           name={galaxy.name}
           images={galaxy.images || []}
+          documents={galaxy.documents || []}
           planets={galaxy.planets}
           planetCount={galaxy._count.planets}
           onEdit={handleEditGalaxy}

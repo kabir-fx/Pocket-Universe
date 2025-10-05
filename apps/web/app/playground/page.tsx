@@ -182,6 +182,62 @@ function Homeer() {
     setSuccessMsg("Planet created successfully!");
   }
 
+  async function handlePdfUpload({
+    file,
+    galaxy,
+    onSuccess,
+  }: {
+    file: File;
+    galaxy?: string;
+    onSuccess?: () => void;
+  }) {
+    setSubmitting(true);
+    setErrorMsg(null);
+    setSuccessMsg(null);
+    try {
+      // Optional: pre-create/validate galaxy if provided
+      if (galaxy && galaxy.trim()) {
+        const galaxyRes = await fetch("/api/playground/galaxyCheck", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ galaxy: galaxy.trim() }),
+        });
+        if (!galaxyRes.ok) {
+          const body = await galaxyRes.json().catch(() => ({}));
+          if (galaxyRes.status === 401) {
+            setErrorMsg("Please sign in to continue.");
+            return;
+          }
+          setErrorMsg(body?.error || "Galaxy creation failed");
+          return;
+        }
+      }
+
+      const form = new FormData();
+      form.append("file", file);
+      if (galaxy && galaxy.trim()) form.append("galaxy", galaxy.trim());
+
+      const res = await fetch("/api/playground/pdfStorage", {
+        method: "POST",
+        body: form,
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        if (res.status === 401) {
+          setErrorMsg("Please sign in to continue.");
+          return;
+        }
+        setErrorMsg(body?.message || body?.error || "PDF upload failed");
+        return;
+      }
+      setSuccessMsg("Document saved successfully!");
+      await fetchGalaxies();
+      if (onSuccess) onSuccess();
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   return (
     <>
       <PlgCard
@@ -196,6 +252,9 @@ function Homeer() {
         showShadows={false}
         onSubmit={handleSubmit}
         onAiSubmit={handleSubmit}
+        onPdfUpload={({ file, galaxy, onSuccess }) =>
+          handlePdfUpload({ file, galaxy, onSuccess })
+        }
       />
     </>
   );

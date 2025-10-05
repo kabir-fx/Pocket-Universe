@@ -5,6 +5,8 @@ import {
   TrashIcon,
   PencilIcon,
   InformationCircleIcon,
+  DocumentTextIcon,
+  ArrowDownTrayIcon,
 } from "@heroicons/react/24/outline";
 import { PlanetItem } from "./planet-item";
 import { useEffect, useRef, useState } from "react";
@@ -31,6 +33,13 @@ interface GalaxyFolderProps {
     reasoning?: string | null;
     alternatives?: string[];
   }[];
+  documents?: {
+    id: string;
+    signedUrl: string | null;
+    contentType: string;
+    createdAt: string;
+    objectKey?: string;
+  }[];
   planets: Planet[];
   planetCount: number;
   onEdit?: (id: string, currentName: string) => void;
@@ -41,6 +50,7 @@ export function GalaxyFolder({
   id,
   name,
   images = [],
+  documents = [],
   planets,
   planetCount,
   onEdit,
@@ -241,8 +251,12 @@ export function GalaxyFolder({
             </div>
           )}
           <div className={styles.cardMeta}>
-            {planetCount + (images?.length || 0)} item
-            {planetCount + (images?.length || 0) !== 1 ? "s" : ""}
+            {planetCount + (images?.length || 0) + (documents?.length || 0)}{" "}
+            item
+            {planetCount + (images?.length || 0) + (documents?.length || 0) !==
+            1
+              ? "s"
+              : ""}
           </div>
         </div>
         {name !== "Orphaned Planets" && (
@@ -436,6 +450,105 @@ export function GalaxyFolder({
           </div>
         ) : null}
 
+        {documents.length > 0 ? (
+          <div className={styles.imageGrid}>
+            {documents.map((doc) => (
+              <a
+                key={doc.id}
+                className={styles.imageItem}
+                href={doc.signedUrl || "#"}
+                target="_blank"
+                rel="noreferrer"
+                title={doc.objectKey || "Document"}
+              >
+                <div className={styles.docThumb}>
+                  <div className={styles.docIconWrap} aria-hidden>
+                    <DocumentTextIcon className={styles.docIcon} />
+                  </div>
+                  <div className={styles.docBadge}>PDF</div>
+                  {/* Controls: copy (URL), info, delete - same positions as images */}
+                  <button
+                    className={styles.docDeleteBtn}
+                    title="Delete document"
+                    onClick={async (e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      try {
+                        const res = await fetch("/api/dashboard", {
+                          method: "DELETE",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            type: "document",
+                            id: doc.id,
+                          }),
+                        });
+                        if (!res.ok) {
+                          const body = await res.json().catch(() => ({}));
+                          alert(body?.error || "Failed to delete document");
+                          return;
+                        }
+                        window.location.reload();
+                      } catch (err) {
+                        console.error("Failed to delete document:", err);
+                        alert("Failed to delete document");
+                      }
+                    }}
+                  >
+                    ×
+                  </button>
+                  <button
+                    className={styles.docCopyBtn}
+                    title="Download PDF"
+                    onClick={async (e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      const btn = e.currentTarget as HTMLButtonElement | null;
+                      try {
+                        const href = doc.signedUrl || "";
+                        if (!href) throw new Error("No signed URL");
+                        const res = await fetch(href, { cache: "no-store" });
+                        if (!res.ok) throw new Error("Fetch failed");
+                        const blob = await res.blob();
+                        const url = URL.createObjectURL(blob);
+                        const fileName =
+                          ((doc as any).objectKey
+                            ?.split("/")
+                            .pop() as string) || "document.pdf";
+                        const a = document.createElement("a");
+                        a.href = url;
+                        a.download = fileName;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        URL.revokeObjectURL(url);
+                        if (btn) {
+                          btn.classList.add((styles as any).docCopied);
+                          setTimeout(
+                            () =>
+                              btn.classList.remove((styles as any).docCopied),
+                            900,
+                          );
+                        }
+                      } catch (err) {
+                        console.error("Download failed:", err);
+                        alert("Download failed");
+                      }
+                    }}
+                    style={{ position: "absolute", top: 36, right: 6 }}
+                    aria-label="Download PDF"
+                  >
+                    <ArrowDownTrayIcon className={styles.infoIcon} />
+                  </button>
+                  <DocInfoButton
+                    reasoning={(doc as any).reasoning ?? null}
+                    alternatives={(doc as any).alternatives ?? []}
+                  />
+                </div>
+              </a>
+            ))}
+          </div>
+        ) : null}
+
         {planets.length > 0 ? (
           <>
             {planets.map((planet) => (
@@ -449,7 +562,7 @@ export function GalaxyFolder({
               />
             ))}
           </>
-        ) : images.length === 0 ? (
+        ) : images.length === 0 && documents.length === 0 ? (
           <div className={styles.emptyState}>
             <div className={styles.emptyIcon}>📁</div>
             <div className={styles.emptyText}>No items yet</div>
@@ -591,6 +704,126 @@ function ImageInfoButton({
                           alt={alt}
                           onDone={() => setOpen(false)}
                         />
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
+    </div>
+  );
+}
+
+function DocInfoButton({
+  reasoning,
+  alternatives,
+}: {
+  reasoning: string | null;
+  alternatives: string[];
+}) {
+  const [open, setOpen] = useState(false);
+  const btnRef = useRef<HTMLButtonElement | null>(null);
+  const [bubblePos, setBubblePos] = useState<{
+    x: number;
+    align: "top" | "bottom";
+  } | null>(null);
+
+  useEffect(() => {
+    function onDoc(e: MouseEvent) {
+      if (!btnRef.current) return;
+      if (!btnRef.current.contains(e.target as Node)) {
+        setOpen(false);
+        setBubblePos(null);
+      }
+    }
+    document.addEventListener("click", onDoc);
+    return () => document.removeEventListener("click", onDoc);
+  }, []);
+
+  useEffect(() => {
+    if (!open || !btnRef.current) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setOpen(false);
+        setBubblePos(null);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    const rect = btnRef.current.getBoundingClientRect();
+    const bubbleWidth = 360;
+    const estimatedBubbleHeight = 200;
+    const margin = 12;
+    const vw = window.innerWidth;
+    const spaceAbove = rect.top;
+    const align: "top" | "bottom" =
+      spaceAbove >= estimatedBubbleHeight + margin ? "top" : "bottom";
+    const x = Math.min(
+      Math.max(rect.right - bubbleWidth, margin),
+      vw - bubbleWidth - margin,
+    );
+    setBubblePos({ x, align });
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
+
+  return (
+    <div className={styles.docInfoWrap}>
+      <button
+        ref={btnRef}
+        className={`${styles.copyBtn} ${styles.imageInfoBtn}`}
+        aria-label="Show context"
+        title={reasoning ? "Show context" : "no context"}
+        onClick={(e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          setOpen((v) => !v);
+        }}
+        style={{ position: "absolute", top: 66, right: 6 }}
+      >
+        <InformationCircleIcon className={styles.infoIcon} />
+      </button>
+      {open && bubblePos && typeof document !== "undefined"
+        ? createPortal(
+            <div
+              className={styles.infoOverlay}
+              style={{ position: "fixed", inset: 0, zIndex: 9998 }}
+            >
+              <div
+                className={styles.infoBubble}
+                role="dialog"
+                aria-label="Context"
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  position: "fixed",
+                  left: `${bubblePos.x}px`,
+                  ...(bubblePos.align === "top"
+                    ? {
+                        bottom: `${window.innerHeight - (btnRef.current?.getBoundingClientRect().top ?? 0) + 12}px`,
+                      }
+                    : {
+                        top: `${(btnRef.current?.getBoundingClientRect().bottom ?? 0) + 12}px`,
+                      }),
+                }}
+              >
+                <div className={styles.infoSection}>
+                  <div className={styles.infoSectionTitle}>Reasoning</div>
+                  <div className={styles.infoSectionBody}>
+                    {reasoning || "no context"}
+                  </div>
+                </div>
+                {alternatives && alternatives.length > 0 ? (
+                  <div className={styles.infoSection}>
+                    <div className={styles.infoSectionTitle}>
+                      Alternative names
+                    </div>
+                    <div className={styles.infoAltButtons}>
+                      {alternatives.slice(0, 10).map((alt, idx) => (
+                        <button key={idx} className={styles.altBtn} disabled>
+                          {alt}
+                        </button>
                       ))}
                     </div>
                   </div>
