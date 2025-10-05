@@ -6,11 +6,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { z } from "zod";
 import { getUserCorrections } from "../../user.corrections";
+import { ensureGalaxyByName } from "../../galaxy.ensure";
+import { enforceAiLimit } from "../../../../lib/AiLimitHandler/auth";
 
 const BodySchema = z.object({
   type: z.string("text"),
   data: z.any().optional(),
   content: z.string().min(3).max(50_000).optional(),
+  galaxy: z.string().optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -49,6 +52,75 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { error: "Missing type for request" },
         { status: 400 },
+      );
+    }
+
+    // Manual bypass: if client provided a folder, do not use AI and do not count towards AI limit
+    const manualGalaxy =
+      typeof body.galaxy === "string" ? body.galaxy.trim().slice(0, 80) : "";
+    if (manualGalaxy) {
+      const folder = await ensureGalaxyByName(userId, manualGalaxy);
+      if (!folder) {
+        return NextResponse.json(
+          { error: "Failed to create/get folder" },
+          { status: 403 },
+        );
+      }
+
+      const rawManual = isLegacyText
+        ? (body.content as string)
+        : typeof body.data?.content === "string"
+          ? (body.data.content as string)
+          : "";
+      const manualContent = rawManual.trim().slice(0, 4000);
+      if (!manualContent) {
+        return NextResponse.json(
+          { error: "Missing text content" },
+          { status: 400 },
+        );
+      }
+
+      const planet = await prisma.planet.create({
+        data: {
+          content: manualContent,
+          userId,
+          galaxies: { connect: { id: folder.id } },
+        },
+      });
+
+      return NextResponse.json(
+        { folderId: folder.id, folderName: folder.name, planetId: planet.id },
+        { status: 200 },
+      );
+    }
+
+    // AI path → enforce rate limit; if exceeded, fallback to orphaned without AI
+    const gate = await enforceAiLimit(userId);
+    if (!gate.allowed) {
+      // Do not assign a folder; let it appear under the virtual Orphaned Planets
+      const rawTextNoAi = isLegacyText
+        ? (body.content as string)
+        : typeof body.data?.content === "string"
+          ? (body.data.content as string)
+          : "";
+      const textNoAi = rawTextNoAi.trim().slice(0, 4000);
+      if (!textNoAi) {
+        return NextResponse.json(
+          { error: "Missing text content" },
+          { status: 400 },
+        );
+      }
+
+      const planet = await prisma.planet.create({
+        data: {
+          content: textNoAi,
+          userId,
+        },
+      });
+
+      return NextResponse.json(
+        { folderId: null, folderName: null, planetId: planet.id },
+        { status: 200 },
       );
     }
 

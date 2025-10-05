@@ -4,7 +4,6 @@ import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import styles from "./playground-card.module.css";
 import {
   FolderIcon,
-  SparklesIcon,
   ChevronDownIcon,
   PlusIcon,
 } from "@heroicons/react/24/outline";
@@ -34,6 +33,7 @@ export interface PlgCardProps {
     galaxy?: string;
     onSuccess?: () => void;
   }) => Promise<void> | void;
+  aiLimited?: boolean;
 }
 
 export function PlgCard({
@@ -49,6 +49,7 @@ export function PlgCard({
   onSubmit,
   onAiSubmit,
   onPdfUpload,
+  aiLimited = false,
 }: PlgCardProps) {
   const [galaxy, setGalaxy] = useState("");
   const [planet, setPlanet] = useState("");
@@ -336,7 +337,7 @@ export function PlgCard({
         {successMsg ? <div className={styles.success}>{successMsg}</div> : null}
 
         <div className={styles.topControls}>
-          {!isImageMode && (
+          {!isImageMode && aiLimited && (
             <div className={styles.galaxyDropdown}>
               <button
                 type="button"
@@ -498,89 +499,112 @@ export function PlgCard({
                 Save with AI
               </button>
             ) : null}
+            {!onAiSubmit && !isImageMode ? (
+              <div className={styles.tooltipWrap}>
+                <button
+                  type="button"
+                  disabled={submitting}
+                  className={styles.createButton}
+                  data-submitting={submitting}
+                  onClick={handleCreateNow}
+                  aria-label="Create"
+                >
+                  {submitting ? "Creating…" : "Create"}
+                </button>
+                {aiLimited ? (
+                  <div className={styles.tooltipBubble}>
+                    AI daily limit reached. Items without a folder go to
+                    Orphaned Planets.
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
           </div>
         </div>
 
         {isImageMode && (
           <div className={styles.imageModeRow}>
             <div className={styles.imageActions}>
-              {/* Add Folder on right side */}
-              <div className={styles.galaxyDropdown}>
-                <button
-                  type="button"
-                  className={styles.addGalaxyBtn}
-                  onClick={() => setShowGalaxyDropdown(!showGalaxyDropdown)}
-                >
-                  <FolderIcon className={styles.sidebarIcon} />
-                  {galaxy || "Add Folder"}
-                  <ChevronDownIcon className={styles.dropdownIcon} />
-                </button>
-                {showGalaxyDropdown && (
-                  <div className={styles.dropdownMenu}>
-                    <div className={styles.dropdownHeader}>
-                      {isTypingGalaxy ? (
-                        <div className={styles.headerInputWrap}>
-                          <input
-                            className={styles.headerInput}
-                            placeholder="New Folder name"
-                            value={newGalaxyName}
-                            onChange={(e) => setNewGalaxyName(e.target.value)}
-                            autoFocus
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") {
-                                const committed = newGalaxyName.trim();
-                                if (committed) {
-                                  setGalaxy(committed);
+              {aiLimited && (
+                <div className={styles.galaxyDropdown}>
+                  <button
+                    type="button"
+                    className={styles.addGalaxyBtn}
+                    onClick={() => setShowGalaxyDropdown(!showGalaxyDropdown)}
+                  >
+                    <FolderIcon className={styles.sidebarIcon} />
+                    {galaxy || "Add Folder"}
+                    <ChevronDownIcon className={styles.dropdownIcon} />
+                  </button>
+                  {showGalaxyDropdown && (
+                    <div className={styles.dropdownMenu}>
+                      <div className={styles.dropdownHeader}>
+                        {isTypingGalaxy ? (
+                          <div className={styles.headerInputWrap}>
+                            <input
+                              className={styles.headerInput}
+                              placeholder="New Folder name"
+                              value={newGalaxyName}
+                              onChange={(e) => setNewGalaxyName(e.target.value)}
+                              autoFocus
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  const committed = newGalaxyName.trim();
+                                  if (committed) {
+                                    setGalaxy(committed);
+                                  }
+                                  setShowGalaxyDropdown(false);
+                                  setIsTypingGalaxy(false);
+                                  setNewGalaxyName("");
                                 }
-                                setShowGalaxyDropdown(false);
-                                setIsTypingGalaxy(false);
-                                setNewGalaxyName("");
-                              }
-                              if (e.key === "Escape") {
-                                setIsTypingGalaxy(false);
-                                setNewGalaxyName("");
-                              }
-                            }}
-                          />
-                        </div>
-                      ) : (
-                        <button
-                          type="button"
-                          aria-label="Create galaxy"
-                          className={styles.headerAddButton}
-                          onClick={() => {
-                            setIsTypingGalaxy(true);
-                            setNewGalaxyName("");
-                          }}
-                        >
-                          <PlusIcon className={styles.plusIcon} />
-                          <span className={styles.headerAddLabel}>Create</span>
-                        </button>
-                      )}
-                    </div>
-                    <div className={styles.galaxyList}>
-                      {filteredGalaxies.length === 0 ? (
-                        <div className={styles.empty}>No galaxies yet</div>
-                      ) : (
-                        filteredGalaxies.map((g) => (
+                                if (e.key === "Escape") {
+                                  setIsTypingGalaxy(false);
+                                  setNewGalaxyName("");
+                                }
+                              }}
+                            />
+                          </div>
+                        ) : (
                           <button
-                            key={g.id}
                             type="button"
-                            className={`${styles.galaxyItem} ${galaxy === g.name ? styles.galaxyItemActive : ""}`}
+                            aria-label="Create galaxy"
+                            className={styles.headerAddButton}
                             onClick={() => {
-                              setGalaxy(g.name);
-                              setShowGalaxyDropdown(false);
-                              setIsTypingGalaxy(false);
+                              setIsTypingGalaxy(true);
+                              setNewGalaxyName("");
                             }}
                           >
-                            {g.name}
+                            <PlusIcon className={styles.plusIcon} />
+                            <span className={styles.headerAddLabel}>
+                              Create
+                            </span>
                           </button>
-                        ))
-                      )}
+                        )}
+                      </div>
+                      <div className={styles.galaxyList}>
+                        {filteredGalaxies.length === 0 ? (
+                          <div className={styles.empty}>No galaxies yet</div>
+                        ) : (
+                          filteredGalaxies.map((g) => (
+                            <button
+                              key={g.id}
+                              type="button"
+                              className={`${styles.galaxyItem} ${galaxy === g.name ? styles.galaxyItemActive : ""}`}
+                              onClick={() => {
+                                setGalaxy(g.name);
+                                setShowGalaxyDropdown(false);
+                                setIsTypingGalaxy(false);
+                              }}
+                            >
+                              {g.name}
+                            </button>
+                          ))
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
+              )}
 
               {onAiSubmit ? (
                 <button
@@ -598,15 +622,24 @@ export function PlgCard({
                   {submitting ? "Saving…" : "Save with AI"}
                 </button>
               ) : (
-                <button
-                  type="button"
-                  disabled={submitting}
-                  onClick={handleCreateNow}
-                  className={`${styles.createButton} ${styles.createButtonLarge}`}
-                  data-submitting={submitting}
-                >
-                  {submitting ? "Creating…" : "Create"}
-                </button>
+                <div className={styles.tooltipWrap}>
+                  <button
+                    type="button"
+                    disabled={submitting}
+                    onClick={handleCreateNow}
+                    className={`${styles.createButton} ${styles.createButtonLarge}`}
+                    data-submitting={submitting}
+                    aria-label="Create"
+                  >
+                    {submitting ? "Creating…" : "Create"}
+                  </button>
+                  {aiLimited ? (
+                    <div className={styles.tooltipBubble}>
+                      AI daily limit reached. Items without a folder go to
+                      Orphaned.
+                    </div>
+                  ) : null}
+                </div>
               )}
             </div>
           </div>

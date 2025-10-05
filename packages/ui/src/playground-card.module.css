@@ -544,6 +544,46 @@
   border-radius: 9999px;
 }
 
+/* Hover tooltip for Create button when AI is limited */
+.tooltipWrap {
+  position: relative;
+  display: inline-block;
+}
+
+.tooltipBubble {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: rgb(239, 42, 42);
+  color: #f9fafb;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 12px;
+  line-height: 1.2;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-2px);
+  transition: opacity 120ms ease, transform 120ms ease;
+  z-index: 20;
+}
+
+.tooltipWrap:hover .tooltipBubble {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.tooltipBubble::after {
+  content: "";
+  position: absolute;
+  bottom: 100%;
+  right: 14px;
+  border-width: 6px;
+  border-style: solid;
+  border-color: transparent transparent rgba(17, 24, 39, 0.95) transparent;
+}
+
 /* Right-side actions when in image mode */
 .imageModeRow {
   display: flex;

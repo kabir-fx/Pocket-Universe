@@ -8,6 +8,7 @@ import { categorizePdf } from "@repo/ai"; // new
 import { ensureGalaxyByName } from "../../galaxy.ensure";
 import { randomUUID, createHash } from "crypto";
 import { getUserCorrections } from "../../user.corrections";
+import { enforceAiLimit } from "../../../../lib/AiLimitHandler/auth";
 
 const BUCKET = process.env.PDF_BUCKET ?? "user-images";
 const MAX_PDF_SIZE = Number(process.env.MAX_PDF_SIZE ?? 20 * 1024 * 1024); // 20MB
@@ -65,13 +66,23 @@ export async function POST(req: NextRequest) {
     galaxyRes = (await ensureGalaxyByName(session.user.id, galaxyName)) as any;
   }
 
+  // If not provided, AI path will be used; if rate limit exceeded, keep unassigned
+  let aiBlocked = false;
+  if (!galaxyRes) {
+    const gate = await enforceAiLimit(session.user.id);
+    if (!gate.allowed) {
+      aiBlocked = true;
+    }
+  }
+
   let aiResult: {
     suggestedFolder: string;
     confidence?: number;
     reasoning?: string;
     alternatives?: string[];
   } | null = null;
-  if (!galaxyRes) {
+  let aiUsed = false;
+  if (!galaxyRes && !aiBlocked) {
     try {
       const userFolders = await prisma.galaxy.findMany({
         where: { userId: session.user.id },
@@ -86,6 +97,7 @@ export async function POST(req: NextRequest) {
         existingFolders: userFolders.map((f) => f.name),
         userCorrections,
       });
+      aiUsed = true;
       const minConf = Number(process.env.DOC_AI_MIN_CONFIDENCE ?? 0.55);
       const target =
         typeof aiResult?.confidence === "number" &&
@@ -96,12 +108,6 @@ export async function POST(req: NextRequest) {
     } catch {
       galaxyRes = null;
     }
-  }
-
-  // Ensure we always have a folder to connect to (fallback to orphaned)
-  if (!galaxyRes) {
-    const ensured = await ensureGalaxyByName(session.user.id, "orphaned");
-    galaxyRes = ensured as any;
   }
 
   const id = randomUUID();
@@ -138,8 +144,11 @@ export async function POST(req: NextRequest) {
     select: { id: true },
   });
 
-  // Audit AI suggestion
+  // Audit AI suggestion only if AI was used
   try {
+    if (!aiUsed) {
+      throw new Error("skip-audit");
+    }
     const folder =
       galaxyRes ?? (await ensureGalaxyByName(session.user.id, "orphaned"));
     await (prisma as any).aICategorization.create({

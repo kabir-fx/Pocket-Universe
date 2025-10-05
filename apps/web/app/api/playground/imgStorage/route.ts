@@ -7,6 +7,7 @@ import { supabaseAdmin } from "../../../../lib/supabase/supabaseAdmin";
 import prisma from "@repo/db/prisma";
 import { categorizeImage, bufferToBase64 } from "@repo/ai";
 import { getUserCorrections } from "../../user.corrections";
+import { enforceAiLimit } from "../../../../lib/AiLimitHandler/auth";
 
 const BUCKET = "user-images";
 const MAX_IMG_SIZE = 6 * 1024 * 1024; // ~6MB
@@ -81,6 +82,15 @@ export async function POST(req: NextRequest) {
       galaxyRes = ensured as any;
     }
 
+    // If no manual folder provided, we will use AI; if rate limit exceeded, fallback to orphaned
+    let aiBlocked = false;
+    if (!galaxyRes) {
+      const gate = await enforceAiLimit(userId);
+      if (!gate.allowed) {
+        aiBlocked = true; // do not run AI; keep unassigned so it shows under virtual orphaned
+      }
+    }
+
     // Normalize common CDN content types (e.g., image/jpg)
     const normalizedCT =
       contentType === "image/jpg" ? "image/jpeg" : contentType;
@@ -99,7 +109,8 @@ export async function POST(req: NextRequest) {
       reasoning?: string;
       alternatives?: string[];
     } | null = null;
-    if (!galaxyRes) {
+    let aiUsed = false;
+    if (!galaxyRes && !aiBlocked) {
       try {
         const userFolders = await prisma.galaxy.findMany({
           where: { userId },
@@ -118,6 +129,7 @@ export async function POST(req: NextRequest) {
           userCorrections,
         });
         aiResult = ai;
+        aiUsed = true;
         const minConf = Number(process.env.IMG_AI_MIN_CONFIDENCE ?? 0.55);
         const target =
           typeof ai?.confidence === "number" && ai.confidence >= minConf
@@ -192,8 +204,11 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // After we know objectKey, persist AI review row (best-effort)
     try {
+      if (!aiUsed) {
+        // Skip audit when AI was not used (e.g., limited or manual folder)
+        throw new Error("skip-audit");
+      }
       const anyPrisma2: any = prisma as any;
       if (!galaxyRes) {
         // ensure fallback when AI not used

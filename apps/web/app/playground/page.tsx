@@ -12,6 +12,7 @@ function Homeer() {
 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [aiLimited, setAiLimited] = useState(false);
 
   const fetchGalaxies = async () => {
     try {
@@ -32,6 +33,17 @@ function Homeer() {
 
   useEffect(() => {
     fetchGalaxies();
+    (async () => {
+      try {
+        const res = await fetch("/api/playground/aiStatus", {
+          method: "GET",
+          cache: "no-store",
+        });
+        if (!res.ok) return;
+        const body = await res.json().catch(() => ({}));
+        if (typeof body?.limited === "boolean") setAiLimited(body.limited);
+      } catch {}
+    })();
   }, []);
 
   async function handleSubmit({
@@ -94,7 +106,7 @@ function Homeer() {
         if (!uploadRes.ok) {
           if (uploadRes.status === 415) {
             // Not an image; fallback to planet creation
-            await createPlanet(planet);
+            await createPlanet(planet, galaxy);
 
             // Refresh galaxies list to show any newly created galaxy
             await fetchGalaxies();
@@ -105,12 +117,19 @@ function Homeer() {
             setErrorMsg("Please sign in to continue.");
             return;
           }
+          if (uploadRes.status === 429) {
+            setAiLimited(true);
+            setErrorMsg(
+              "AI daily limit reached. You can still add to a folder manually.",
+            );
+            return;
+          }
           setErrorMsg(body?.message || body?.error || "Image upload failed");
           return;
         }
         setSuccessMsg("Image saved successfully!");
       } else {
-        await createPlanet(planet);
+        await createPlanet(planet, galaxy);
       }
       // Refresh galaxies list to show any newly created galaxy
       await fetchGalaxies();
@@ -161,13 +180,24 @@ function Homeer() {
     }
   }
 
-  async function createPlanet(planet: string) {
+  async function createPlanet(planet: string, galaxy?: string) {
     const planetRes = await fetch("/api/playground/planetCreate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type: "text", data: { content: planet || "" } }),
+      body: JSON.stringify({
+        type: "text",
+        data: { content: planet || "" },
+        ...(galaxy && galaxy.trim() ? { galaxy: galaxy.trim() } : {}),
+      }),
     });
 
+    if (planetRes.status === 429) {
+      setAiLimited(true);
+      setErrorMsg(
+        "AI daily limit reached. You can still add to a folder manually.",
+      );
+      return;
+    }
     if (!planetRes.ok) {
       const body = await planetRes.json().catch(() => ({}));
 
@@ -227,6 +257,13 @@ function Homeer() {
           setErrorMsg("Please sign in to continue.");
           return;
         }
+        if (res.status === 429) {
+          setAiLimited(true);
+          setErrorMsg(
+            "AI daily limit reached. You can still add to a folder manually.",
+          );
+          return;
+        }
         setErrorMsg(body?.message || body?.error || "PDF upload failed");
         return;
       }
@@ -251,10 +288,11 @@ function Homeer() {
         cardBackgroundColor="transparent"
         showShadows={false}
         onSubmit={handleSubmit}
-        onAiSubmit={handleSubmit}
+        onAiSubmit={aiLimited ? undefined : handleSubmit}
         onPdfUpload={({ file, galaxy, onSuccess }) =>
           handlePdfUpload({ file, galaxy, onSuccess })
         }
+        aiLimited={aiLimited}
       />
     </>
   );
