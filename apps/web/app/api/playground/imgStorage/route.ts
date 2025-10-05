@@ -122,7 +122,7 @@ export async function POST(req: NextRequest) {
         const target =
           typeof ai?.confidence === "number" && ai.confidence >= minConf
             ? ai.suggestedFolder
-            : "orphaned";
+            : "miscellaneous";
         const ensured = await ensureGalaxyByName(userId, target);
         if (ensured) {
           galaxyRes = ensured as any;

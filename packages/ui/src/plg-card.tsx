@@ -448,7 +448,6 @@ export function PlgCard({
                 Save with AI
               </button>
             ) : null}
-            {/* Removed manual Create button in text mode to prefer AI flow */}
           </div>
         </div>
 
@@ -533,15 +532,12 @@ export function PlgCard({
                 )}
               </div>
 
-              {/* Replace with Save with AI for image mode if available */}
               {onAiSubmit ? (
                 <button
                   type="button"
                   disabled={submitting}
                   onClick={async () => {
                     if (!onAiSubmit) return;
-                    // In image mode, planet is empty; we still call onSubmit to upload image,
-                    // but the user requested Save with AI replaces create, so delegate to onSubmit.
                     await handleCreateNow();
                   }}
                   className={`${styles.createButton} ${styles.createButtonLarge}`}

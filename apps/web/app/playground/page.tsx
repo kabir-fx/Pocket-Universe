@@ -94,25 +94,9 @@ function Homeer() {
         if (!uploadRes.ok) {
           if (uploadRes.status === 415) {
             // Not an image; fallback to planet creation
-            const planetRes = await fetch("/api/playground/planetCreate", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                planet: planet,
-                galaxy: galaxy && galaxy.trim() ? galaxy.trim() : undefined,
-              }),
-            });
+            await createPlanet(planet);
 
-            if (!planetRes.ok) {
-              const pbody = await planetRes.json().catch(() => ({}));
-              if (planetRes.status === 401) {
-                setErrorMsg("Please sign in to continue.");
-              } else {
-                setErrorMsg(pbody?.error || "Planet creation failed");
-              }
-              return;
-            }
-            setSuccessMsg("Planet created successfully!");
+            // Refresh galaxies list to show any newly created galaxy
             await fetchGalaxies();
             if (onSuccess) onSuccess();
             return;
@@ -126,27 +110,7 @@ function Homeer() {
         }
         setSuccessMsg("Image saved successfully!");
       } else {
-        const planetRes = await fetch("/api/playground/planetCreate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            planet: planet,
-            galaxy: galaxy && galaxy.trim() ? galaxy.trim() : undefined,
-          }),
-        });
-
-        if (!planetRes.ok) {
-          const body = await planetRes.json().catch(() => ({}));
-
-          if (planetRes.status === 401) {
-            setErrorMsg("Please sign in to continue.");
-            return;
-          }
-
-          setErrorMsg(body?.error || "Planet creation failed");
-          return;
-        }
-        setSuccessMsg("Planet created successfully!");
+        await createPlanet(planet);
       }
       // Refresh galaxies list to show any newly created galaxy
       await fetchGalaxies();
@@ -197,6 +161,27 @@ function Homeer() {
     }
   }
 
+  async function createPlanet(planet: string) {
+    const planetRes = await fetch("/api/playground/planetCreate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "text", data: { content: planet || "" } }),
+    });
+
+    if (!planetRes.ok) {
+      const body = await planetRes.json().catch(() => ({}));
+
+      if (planetRes.status === 401) {
+        setErrorMsg("Please sign in to continue.");
+        return;
+      }
+
+      setErrorMsg(body?.error || "Planet creation failed");
+      return;
+    }
+    setSuccessMsg("Planet created successfully!");
+  }
+
   return (
     <>
       <PlgCard
@@ -210,45 +195,7 @@ function Homeer() {
         cardBackgroundColor="transparent"
         showShadows={false}
         onSubmit={handleSubmit}
-        onAiSubmit={async ({ planet, onSuccess }) => {
-          setSubmitting(true);
-          setErrorMsg(null);
-          setSuccessMsg(null);
-          try {
-            // Decide whether this is an image categorization or text
-            const asDataUrl = planet && isDataUrl(planet) ? planet : null;
-            const asUrl =
-              !asDataUrl && planet ? isLikelyImageUrl(planet) : null;
-
-            const payload = asDataUrl
-              ? { type: "image", data: { dataUrl: asDataUrl } }
-              : asUrl
-                ? { type: "image", data: { url: asUrl } }
-                : { type: "text", data: { content: planet || "" } };
-
-            const res = await fetch("/api/ai/pipeline", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(payload),
-            });
-            const body = await res.json().catch(() => null);
-            if (!res.ok) {
-              if (res.status === 401) {
-                setErrorMsg("Please sign in to continue.");
-              } else {
-                setErrorMsg(body?.error || "AI pipeline failed");
-              }
-              return;
-            }
-            setSuccessMsg(
-              "Saved with AI! You can review it on your dashboard anytime.",
-            );
-            await fetchGalaxies();
-            if (onSuccess) onSuccess();
-          } finally {
-            setSubmitting(false);
-          }
-        }}
+        onAiSubmit={handleSubmit}
       />
     </>
   );
