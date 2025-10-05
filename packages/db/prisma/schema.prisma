@@ -28,6 +28,12 @@ model User {
   galaxies Galaxy[]
   planets  Planet[]
 
+  images Image[]
+
+  documents Document[]
+
+  aiSlop AICategorization[]
+
   createdAt DateTime @default(now())
 }
 
@@ -68,22 +74,95 @@ model VerificationToken {
 }
 
 model Galaxy {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  user      User     @relation(fields: [userId], references: [id])
-  userId    String
-  planets   Planet[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  shareable Boolean
+  id                String             @id @default(cuid())
+  name              String
+  user              User               @relation(fields: [userId], references: [id])
+  userId            String
+  planets           Planet[]
+  aiCategorizations AICategorization[]
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  shareable         Boolean
+
+  images Image[]
+
+  documents Document[]
+
+  @@unique([userId, name])
 }
 
 model Planet {
-  id        String   @id @default(cuid())
-  content   String
-  user      User     @relation(fields: [userId], references: [id])
-  userId    String
-  galaxies  Galaxy[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                String             @id @default(cuid())
+  content           String
+  user              User               @relation(fields: [userId], references: [id])
+  userId            String
+  galaxies          Galaxy[]
+  aiCategorizations AICategorization[]
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+}
+
+model AICategorization {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+  planetId        String?
+  planet          Planet?  @relation(fields: [planetId], references: [id])
+  folderId        String?
+  folder          Galaxy?  @relation(fields: [folderId], references: [id])
+  contentPreview  String // first ~500-1000 chars, not full blob
+  suggestedFolder String
+  acceptedFolder  String? // set when user accepts/overrides
+  confidence      Float
+  reasoning       String?
+  alternatives    String[]
+  createdAt       DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model Image {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  galaxies Galaxy[]
+
+  bucket         String
+  objectKey      String
+  contentType    String
+  sizeBytes      BigInt
+  checksumSha256 String?
+  width          Int?
+  height         Int?
+  isPublic       Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+  deletedAt      DateTime?
+
+  @@unique([userId, objectKey])
+  @@index([userId])
+  @@index([bucket, objectKey])
+}
+
+model Document {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  galaxies Galaxy[]
+
+  bucket         String
+  objectKey      String
+  contentType    String // "application/pdf"
+  sizeBytes      BigInt
+  checksumSha256 String?
+  pageCount      Int? // optional
+
+  isPublic  Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  deletedAt DateTime?
+
+  @@unique([userId, objectKey])
+  @@index([userId])
+  @@index([bucket, objectKey])
 }

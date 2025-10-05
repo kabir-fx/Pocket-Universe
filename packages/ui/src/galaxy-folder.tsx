@@ -1,19 +1,45 @@
 "use client";
 
-import { FolderIcon, TrashIcon, PencilIcon } from "@heroicons/react/24/outline";
+import {
+  FolderIcon,
+  TrashIcon,
+  PencilIcon,
+  InformationCircleIcon,
+  DocumentTextIcon,
+  ArrowDownTrayIcon,
+} from "@heroicons/react/24/outline";
 import { PlanetItem } from "./planet-item";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import styles from "./dashboard.module.css";
 
 interface Planet {
   id: string;
   content: string;
   createdAt: Date;
+  reasoning?: string | null;
+  alternatives?: string[];
 }
 
 interface GalaxyFolderProps {
   id: string;
   name: string;
+  images?: {
+    id: string;
+    signedUrl: string | null;
+    contentType: string;
+    createdAt: string;
+    objectKey?: string;
+    reasoning?: string | null;
+    alternatives?: string[];
+  }[];
+  documents?: {
+    id: string;
+    signedUrl: string | null;
+    contentType: string;
+    createdAt: string;
+    objectKey?: string;
+  }[];
   planets: Planet[];
   planetCount: number;
   onEdit?: (id: string, currentName: string) => void;
@@ -23,6 +49,8 @@ interface GalaxyFolderProps {
 export function GalaxyFolder({
   id,
   name,
+  images = [],
+  documents = [],
   planets,
   planetCount,
   onEdit,
@@ -34,6 +62,10 @@ export function GalaxyFolder({
   const [isEditingName, setIsEditingName] = useState(false);
   const [editName, setEditName] = useState(name);
   const [showEditIcon, setShowEditIcon] = useState(false);
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const copyTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined" && "matchMedia" in window) {
@@ -43,6 +75,46 @@ export function GalaxyFolder({
     }
     return () => {
       if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (copyTimerRef.current) window.clearTimeout(copyTimerRef.current);
+    };
+  }, []);
+
+  function markCopied(id: string) {
+    if (copyTimerRef.current) window.clearTimeout(copyTimerRef.current);
+    setCopiedId(id);
+    copyTimerRef.current = window.setTimeout(() => setCopiedId(null), 1000);
+  }
+
+  // Close lightbox on ESC
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setLightboxUrl(null);
+    }
+    if (lightboxUrl) {
+      window.addEventListener("keydown", onKey);
+    }
+    return () => window.removeEventListener("keydown", onKey);
+  }, [lightboxUrl]);
+
+  // Pause tilt when any info bubble is open
+  const tiltPausedRef = useRef<boolean>(false);
+  useEffect(() => {
+    function onOpen() {
+      tiltPausedRef.current = true;
+    }
+    function onClose() {
+      tiltPausedRef.current = false;
+    }
+    window.addEventListener("planet-info-open", onOpen as EventListener);
+    window.addEventListener("planet-info-close", onClose as EventListener);
+    return () => {
+      window.removeEventListener("planet-info-open", onOpen as EventListener);
+      window.removeEventListener("planet-info-close", onClose as EventListener);
     };
   }, []);
 
@@ -108,7 +180,7 @@ export function GalaxyFolder({
   }
 
   function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
-    if (prefersReducedMotionRef.current) return;
+    if (prefersReducedMotionRef.current || tiltPausedRef.current) return;
     const el = cardRef.current;
     if (!el) return;
 
@@ -179,7 +251,12 @@ export function GalaxyFolder({
             </div>
           )}
           <div className={styles.cardMeta}>
-            {planetCount} planet{planetCount !== 1 ? "s" : ""}
+            {planetCount + (images?.length || 0) + (documents?.length || 0)}{" "}
+            item
+            {planetCount + (images?.length || 0) + (documents?.length || 0) !==
+            1
+              ? "s"
+              : ""}
           </div>
         </div>
         {name !== "Orphaned Planets" && (
@@ -198,6 +275,283 @@ export function GalaxyFolder({
       </div>
 
       <div className={styles.cardContent}>
+        {images.length > 0 ? (
+          <div className={styles.imageGrid}>
+            {images.map((img) => (
+              <div
+                key={img.id}
+                className={styles.imageItem}
+                data-image-id={img.id}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={img.signedUrl || ""}
+                  alt={name}
+                  className={`${styles.imageThumb} ${deletingId === img.id ? styles.imageDeleting : ""}`}
+                  onClick={() => img.signedUrl && setLightboxUrl(img.signedUrl)}
+                />
+                <button
+                  className={styles.imageDeleteBtn}
+                  title="Delete image"
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    try {
+                      setDeletingId(img.id);
+                      const res = await fetch("/api/dashboard", {
+                        method: "DELETE",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ type: "image", id: img.id }),
+                      });
+                      if (!res.ok) {
+                        const body = await res.json().catch(() => ({}));
+                        alert(body?.error || "Failed to delete image");
+                        return;
+                      }
+                      // Refresh to reflect counts and cleanup
+                      window.location.reload();
+                    } catch (err) {
+                      console.error("Failed to delete image:", err);
+                      alert("Failed to delete image");
+                    } finally {
+                      setDeletingId(null);
+                    }
+                  }}
+                  disabled={deletingId === img.id}
+                >
+                  ×
+                </button>
+                <button
+                  className={`${styles.imageCopyBtn} ${copiedId === img.id ? styles.imageCopyBtnOk : ""}`}
+                  title="Copy image to clipboard"
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    try {
+                      if (!img.signedUrl) {
+                        alert("No image URL available to copy");
+                        return;
+                      }
+                      const res = await fetch(img.signedUrl, {
+                        cache: "no-store",
+                      });
+                      if (!res.ok) throw new Error("Failed to fetch image");
+                      let blob = await res.blob();
+                      const origMime =
+                        blob.type || img.contentType || "image/png";
+
+                      const canWrite = Boolean(
+                        (navigator as any)?.clipboard &&
+                          (navigator.clipboard as any).write &&
+                          (window as any).ClipboardItem,
+                      );
+                      const supportsType = (type: string) => {
+                        const CI: any = (window as any).ClipboardItem;
+                        return typeof CI?.supports === "function"
+                          ? CI.supports(type)
+                          : type === "image/png";
+                      };
+
+                      if (canWrite) {
+                        try {
+                          if (supportsType(origMime)) {
+                            const item = new (window as any).ClipboardItem({
+                              [origMime]: blob,
+                            });
+                            await (navigator.clipboard as any).write([item]);
+                            markCopied(img.id);
+                            return;
+                          }
+                        } catch {}
+
+                        // Convert to PNG if original type isn't supported for clipboard write (e.g., image/jpeg)
+                        if (supportsType("image/png")) {
+                          try {
+                            const pngBlob = await (async () => {
+                              const url = URL.createObjectURL(blob);
+                              try {
+                                const image =
+                                  await new Promise<HTMLImageElement>(
+                                    (resolve, reject) => {
+                                      const im = new Image();
+                                      im.onload = () => resolve(im);
+                                      im.onerror = reject as any;
+                                      im.crossOrigin = "anonymous";
+                                      im.src = url;
+                                    },
+                                  );
+                                const canvas = document.createElement("canvas");
+                                canvas.width =
+                                  image.naturalWidth || image.width;
+                                canvas.height =
+                                  image.naturalHeight || image.height;
+                                const ctx = canvas.getContext("2d");
+                                if (!ctx)
+                                  throw new Error("Canvas 2D not available");
+                                ctx.drawImage(image, 0, 0);
+                                return await new Promise<Blob>(
+                                  (resolve, reject) =>
+                                    canvas.toBlob(
+                                      (b) =>
+                                        b
+                                          ? resolve(b)
+                                          : reject(new Error("toBlob failed")),
+                                      "image/png",
+                                    ),
+                                );
+                              } finally {
+                                URL.revokeObjectURL(url);
+                              }
+                            })();
+                            const item = new (window as any).ClipboardItem({
+                              ["image/png"]: pngBlob,
+                            });
+                            await (navigator.clipboard as any).write([item]);
+                            markCopied(img.id);
+                            return;
+                          } catch (err) {
+                            console.warn(
+                              "PNG fallback failed, copying URL instead",
+                              err,
+                            );
+                          }
+                        }
+
+                        // Final fallback: copy URL as text
+                        await navigator.clipboard.writeText(img.signedUrl);
+                        markCopied(img.id);
+                        return;
+                      }
+
+                      // If programmatic image write is unavailable, fallback to copying URL
+                      await navigator.clipboard.writeText(img.signedUrl);
+                      markCopied(img.id);
+                    } catch (err) {
+                      console.error("Copy image failed:", err);
+                      try {
+                        if (img.signedUrl) {
+                          await navigator.clipboard.writeText(img.signedUrl);
+                          markCopied(img.id);
+                        } else {
+                          alert("Failed to copy image");
+                        }
+                      } catch {}
+                    }
+                  }}
+                >
+                  {copiedId === img.id ? "✓" : "⧉"}
+                </button>
+                {/* Info button for AI reasoning/alternatives */}
+                <ImageInfoButton
+                  imageId={img.id}
+                  reasoning={img.reasoning ?? null}
+                  alternatives={img.alternatives ?? []}
+                />
+              </div>
+            ))}
+          </div>
+        ) : null}
+
+        {documents.length > 0 ? (
+          <div className={styles.imageGrid}>
+            {documents.map((doc) => (
+              <a
+                key={doc.id}
+                className={styles.imageItem}
+                href={doc.signedUrl || "#"}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <div className={styles.docThumb}>
+                  <DocFirstPageThumb
+                    url={doc.signedUrl || ""}
+                    fallbackIcon={
+                      <DocumentTextIcon className={styles.docIcon} />
+                    }
+                  />
+                  <div className={styles.docBadge}>PDF</div>
+                  {/* Controls: copy (URL), info, delete - same positions as images */}
+                  <button
+                    className={styles.docDeleteBtn}
+                    title="Delete document"
+                    onClick={async (e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      try {
+                        const res = await fetch("/api/dashboard", {
+                          method: "DELETE",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            type: "document",
+                            id: doc.id,
+                          }),
+                        });
+                        if (!res.ok) {
+                          const body = await res.json().catch(() => ({}));
+                          alert(body?.error || "Failed to delete document");
+                          return;
+                        }
+                        window.location.reload();
+                      } catch (err) {
+                        console.error("Failed to delete document:", err);
+                        alert("Failed to delete document");
+                      }
+                    }}
+                  >
+                    ×
+                  </button>
+                  <button
+                    className={styles.docCopyBtn}
+                    title="Download PDF"
+                    onClick={async (e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      const btn = e.currentTarget as HTMLButtonElement | null;
+                      try {
+                        const href = doc.signedUrl || "";
+                        if (!href) throw new Error("No signed URL");
+                        const res = await fetch(href, { cache: "no-store" });
+                        if (!res.ok) throw new Error("Fetch failed");
+                        const blob = await res.blob();
+                        const url = URL.createObjectURL(blob);
+                        const fileName =
+                          ((doc as any).objectKey
+                            ?.split("/")
+                            .pop() as string) || "document.pdf";
+                        const a = document.createElement("a");
+                        a.href = url;
+                        a.download = fileName;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        URL.revokeObjectURL(url);
+                        if (btn) {
+                          btn.classList.add((styles as any).docCopied);
+                          setTimeout(
+                            () =>
+                              btn.classList.remove((styles as any).docCopied),
+                            900,
+                          );
+                        }
+                      } catch (err) {
+                        console.error("Download failed:", err);
+                        alert("Download failed");
+                      }
+                    }}
+                    style={{ position: "absolute", top: 36, right: 6 }}
+                    aria-label="Download PDF"
+                  >
+                    <ArrowDownTrayIcon className={styles.infoIcon} />
+                  </button>
+                  <DocInfoButton
+                    documentId={doc.id}
+                    reasoning={(doc as any).reasoning ?? null}
+                    alternatives={(doc as any).alternatives ?? []}
+                  />
+                </div>
+              </a>
+            ))}
+          </div>
+        ) : null}
+
         {planets.length > 0 ? (
           <>
             {planets.map((planet) => (
@@ -206,18 +560,422 @@ export function GalaxyFolder({
                 id={planet.id}
                 content={planet.content}
                 createdAt={planet.createdAt}
+                reasoning={planet.reasoning ?? null}
+                alternatives={planet.alternatives ?? []}
               />
             ))}
           </>
-        ) : (
+        ) : images.length === 0 && documents.length === 0 ? (
           <div className={styles.emptyState}>
             <div className={styles.emptyIcon}>📁</div>
-            <div className={styles.emptyText}>No planets yet</div>
+            <div className={styles.emptyText}>No items yet</div>
           </div>
-        )}
+        ) : null}
       </div>
+
+      {lightboxUrl
+        ? createPortal(
+            <div
+              className={styles.lightboxOverlay}
+              onClick={() => setLightboxUrl(null)}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={lightboxUrl}
+                alt={name}
+                className={styles.lightboxImg}
+                onClick={(e) => e.stopPropagation()}
+              />
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }
 
 export default GalaxyFolder;
+
+function ImageInfoButton({
+  imageId,
+  reasoning,
+  alternatives,
+}: {
+  imageId: string;
+  reasoning: string | null;
+  alternatives: string[];
+}) {
+  const [open, setOpen] = useState(false);
+  const btnRef = useRef<HTMLButtonElement | null>(null);
+  const [bubblePos, setBubblePos] = useState<{
+    x: number;
+    align: "top" | "bottom";
+  } | null>(null);
+
+  useEffect(() => {
+    function onDoc(e: MouseEvent) {
+      if (!btnRef.current) return;
+      if (!btnRef.current.contains(e.target as Node)) {
+        setOpen(false);
+        setBubblePos(null);
+      }
+    }
+    document.addEventListener("click", onDoc);
+    return () => document.removeEventListener("click", onDoc);
+  }, []);
+
+  useEffect(() => {
+    if (!open || !btnRef.current) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setOpen(false);
+        setBubblePos(null);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    const rect = btnRef.current.getBoundingClientRect();
+    const bubbleWidth = 360;
+    const estimatedBubbleHeight = 200;
+    const margin = 12;
+    const vw = window.innerWidth;
+    const spaceAbove = rect.top;
+    const align: "top" | "bottom" =
+      spaceAbove >= estimatedBubbleHeight + margin ? "top" : "bottom";
+    const x = Math.min(
+      Math.max(rect.right - bubbleWidth, margin),
+      vw - bubbleWidth - margin,
+    );
+    setBubblePos({ x, align });
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
+
+  return (
+    <div className={styles.imageInfoWrap}>
+      <button
+        ref={btnRef}
+        className={`${styles.copyBtn} ${styles.imageInfoBtn}`}
+        aria-label="Show context"
+        title={reasoning ? "Show context" : "no context"}
+        onClick={(e) => {
+          e.stopPropagation();
+          setOpen((v) => !v);
+        }}
+        style={{ position: "absolute", top: 66, right: 6 }}
+      >
+        <InformationCircleIcon className={styles.infoIcon} />
+      </button>
+      {open && bubblePos && typeof document !== "undefined"
+        ? createPortal(
+            <div
+              className={styles.infoOverlay}
+              style={{ position: "fixed", inset: 0, zIndex: 9998 }}
+            >
+              <div
+                className={styles.infoBubble}
+                role="dialog"
+                aria-label="Context"
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  position: "fixed",
+                  left: `${bubblePos.x}px`,
+                  ...(bubblePos.align === "top"
+                    ? {
+                        bottom: `${window.innerHeight - (btnRef.current?.getBoundingClientRect().top ?? 0) + 12}px`,
+                      }
+                    : {
+                        top: `${(btnRef.current?.getBoundingClientRect().bottom ?? 0) + 12}px`,
+                      }),
+                }}
+              >
+                <div className={styles.infoSection}>
+                  <div className={styles.infoSectionTitle}>Reasoning</div>
+                  <div className={styles.infoSectionBody}>
+                    {reasoning || "no context"}
+                  </div>
+                </div>
+                {alternatives && alternatives.length > 0 ? (
+                  <div className={styles.infoSection}>
+                    <div className={styles.infoSectionTitle}>
+                      Alternative names
+                    </div>
+                    <div className={styles.infoAltButtons}>
+                      {alternatives.slice(0, 10).map((alt, idx) => (
+                        <AltFolderButton
+                          key={idx}
+                          imageId={imageId}
+                          alt={alt}
+                          onDone={() => setOpen(false)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
+    </div>
+  );
+}
+
+function DocFirstPageThumb({
+  url,
+  fallbackIcon,
+}: {
+  url: string;
+  fallbackIcon: React.ReactNode;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    async function render() {
+      try {
+        if (!url) throw new Error("no url");
+        // Lazy-load UMD build via CDN to avoid bundler deps
+        const ensurePdfJs = async () => {
+          if (typeof window === "undefined") return null as any;
+          const w = window as any;
+          if (w.pdfjsLib) return w.pdfjsLib as any;
+          await new Promise<void>((resolve, reject) => {
+            const s = document.createElement("script");
+            s.src =
+              "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js";
+            s.onload = () => resolve();
+            s.onerror = () => reject(new Error("pdfjs load failed"));
+            document.head.appendChild(s);
+          });
+          const lib = (window as any).pdfjsLib as any;
+          if (lib?.GlobalWorkerOptions)
+            lib.GlobalWorkerOptions.workerSrc =
+              "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js";
+          return lib;
+        };
+        const pdfjsLib: any = await ensurePdfJs();
+        if (!pdfjsLib) throw new Error("pdfjs missing");
+        const loadingTask = pdfjsLib.getDocument({
+          url,
+          withCredentials: false,
+        });
+        const pdf = await loadingTask.promise;
+        const page = await pdf.getPage(1);
+        const viewport = page.getViewport({ scale: 1.2 });
+        const canvas = canvasRef.current;
+        if (!canvas || cancelled) return;
+        canvas.width = Math.floor(viewport.width);
+        canvas.height = Math.floor(viewport.height);
+        const ctx = canvas.getContext("2d");
+        if (!ctx) throw new Error("no ctx");
+        await page.render({ canvasContext: ctx, viewport }).promise;
+      } catch {
+        if (!cancelled) setFailed(true);
+      }
+    }
+    render();
+    return () => {
+      cancelled = true;
+    };
+  }, [url]);
+  return failed ? (
+    <div className={styles.docIconWrap} aria-hidden>
+      {fallbackIcon}
+    </div>
+  ) : (
+    <canvas
+      ref={canvasRef}
+      style={{
+        width: "100%",
+        height: "140px",
+        objectFit: "cover",
+        display: "block",
+      }}
+    />
+  );
+}
+
+function DocInfoButton({
+  documentId,
+  reasoning,
+  alternatives,
+}: {
+  documentId: string;
+  reasoning: string | null;
+  alternatives: string[];
+}) {
+  const [open, setOpen] = useState(false);
+  const btnRef = useRef<HTMLButtonElement | null>(null);
+  const [bubblePos, setBubblePos] = useState<{
+    x: number;
+    align: "top" | "bottom";
+  } | null>(null);
+
+  useEffect(() => {
+    function onDoc(e: MouseEvent) {
+      if (!btnRef.current) return;
+      if (!btnRef.current.contains(e.target as Node)) {
+        setOpen(false);
+        setBubblePos(null);
+      }
+    }
+    document.addEventListener("click", onDoc);
+    return () => document.removeEventListener("click", onDoc);
+  }, []);
+
+  useEffect(() => {
+    if (!open || !btnRef.current) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setOpen(false);
+        setBubblePos(null);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    const rect = btnRef.current.getBoundingClientRect();
+    const bubbleWidth = 360;
+    const estimatedBubbleHeight = 200;
+    const margin = 12;
+    const vw = window.innerWidth;
+    const spaceAbove = rect.top;
+    const align: "top" | "bottom" =
+      spaceAbove >= estimatedBubbleHeight + margin ? "top" : "bottom";
+    const x = Math.min(
+      Math.max(rect.right - bubbleWidth, margin),
+      vw - bubbleWidth - margin,
+    );
+    setBubblePos({ x, align });
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
+
+  return (
+    <div className={styles.docInfoWrap}>
+      <button
+        ref={btnRef}
+        className={`${styles.copyBtn} ${styles.imageInfoBtn}`}
+        aria-label="Show context"
+        title={reasoning ? "Show context" : "no context"}
+        onClick={(e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          setOpen((v) => !v);
+        }}
+        style={{ position: "absolute", top: 66, right: 6 }}
+      >
+        <InformationCircleIcon className={styles.infoIcon} />
+      </button>
+      {open && bubblePos && typeof document !== "undefined"
+        ? createPortal(
+            <div
+              className={styles.infoOverlay}
+              style={{ position: "fixed", inset: 0, zIndex: 9998 }}
+            >
+              <div
+                className={styles.infoBubble}
+                role="dialog"
+                aria-label="Context"
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  position: "fixed",
+                  left: `${bubblePos.x}px`,
+                  ...(bubblePos.align === "top"
+                    ? {
+                        bottom: `${window.innerHeight - (btnRef.current?.getBoundingClientRect().top ?? 0) + 12}px`,
+                      }
+                    : {
+                        top: `${(btnRef.current?.getBoundingClientRect().bottom ?? 0) + 12}px`,
+                      }),
+                }}
+              >
+                <div className={styles.infoSection}>
+                  <div className={styles.infoSectionTitle}>Reasoning</div>
+                  <div className={styles.infoSectionBody}>
+                    {reasoning || "no context"}
+                  </div>
+                </div>
+                {alternatives && alternatives.length > 0 ? (
+                  <div className={styles.infoSection}>
+                    <div className={styles.infoSectionTitle}>
+                      Alternative names
+                    </div>
+                    <div className={styles.infoAltButtons}>
+                      {alternatives.slice(0, 10).map((alt, idx) => (
+                        <button
+                          key={idx}
+                          className={styles.altBtn}
+                          onClick={async (e) => {
+                            e.preventDefault();
+                            try {
+                              const res = await fetch("/api/dashboard", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({
+                                  action: "attachDocumentToFolder",
+                                  documentId,
+                                  folderName: alt,
+                                }),
+                              });
+                              if (!res.ok) return;
+                              setOpen(false);
+                              window.location.reload();
+                            } catch {}
+                          }}
+                        >
+                          {alt}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
+    </div>
+  );
+}
+
+function AltFolderButton({
+  imageId,
+  alt,
+  onDone,
+}: {
+  imageId: string;
+  alt: string;
+  onDone: () => void;
+}) {
+  const [loading, setLoading] = useState(false);
+  async function handleClick(e: React.MouseEvent) {
+    e.stopPropagation();
+    setLoading(true);
+    try {
+      const res = await fetch("/api/dashboard", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "attachImageToFolder",
+          imageId,
+          folderName: alt,
+        }),
+      });
+      if (!res.ok) return;
+      onDone();
+      window.location.reload();
+    } finally {
+      setLoading(false);
+    }
+  }
+  return (
+    <button
+      type="button"
+      className={styles.altBtn}
+      title={alt}
+      onClick={handleClick}
+      disabled={loading}
+    >
+      {loading ? "Adding…" : alt}
+    </button>
+  );
+}

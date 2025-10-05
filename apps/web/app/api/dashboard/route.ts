@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { authOptions } from "../../../lib/nextAuth/auth";
 import { getServerSession } from "next-auth";
 import prisma from "@repo/db/prisma";
+import { supabaseAdmin } from "../../../lib/supabase/supabaseAdmin";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -16,6 +17,28 @@ export async function GET() {
     select: {
       id: true,
       name: true,
+      images: {
+        select: {
+          id: true,
+          bucket: true,
+          objectKey: true,
+          contentType: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: "desc" },
+        take: 12,
+      },
+      documents: {
+        select: {
+          id: true,
+          bucket: true,
+          objectKey: true,
+          contentType: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: "desc" },
+        take: 12,
+      },
       planets: {
         select: {
           id: true,
@@ -44,23 +67,415 @@ export async function GET() {
     orderBy: { createdAt: "desc" },
   });
 
-  console.log("API - User ID:", session.user.id);
-  console.log("API - Real galaxies found:", galaxies.length);
-  console.log("API - Orphaned planets found:", orphanedPlanets.length);
+  // Fetch images that don't belong to any galaxy (orphaned images)
+  const orphanedImages = await prisma.image.findMany({
+    where: {
+      userId: session.user.id,
+      galaxies: {
+        none: {},
+      },
+    },
+    select: {
+      id: true,
+      bucket: true,
+      objectKey: true,
+      contentType: true,
+      createdAt: true,
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  // Orphaned documents (no folder)
+  const orphanedDocuments = await prisma.document.findMany({
+    where: {
+      userId: session.user.id,
+      galaxies: { none: {} },
+    },
+    select: {
+      id: true,
+      bucket: true,
+      objectKey: true,
+      contentType: true,
+      createdAt: true,
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  const planetIdToReason: Record<string, string> = {};
+  const contentToReason: Record<string, string> = {};
+  const planetIdToAlternatives: Record<string, string[]> = {};
+  const contentToAlternatives: Record<string, string[]> = {};
+
+  // For images, map objectKey => reasoning/alternatives when available
+  const imageKeyToReason: Record<string, string> = {};
+  const imageKeyToAlternatives: Record<string, string[]> = {};
+  const docKeyToReason: Record<string, string> = {};
+  const docKeyToAlternatives: Record<string, string[]> = {};
+  const normalize = (s: string) => s.trim().replace(/\s+/g, " ").slice(0, 500);
+  try {
+    const anyPrisma: any = prisma as any;
+    if (anyPrisma?.aICategorization?.findMany) {
+      // Pull recent categorizations with planetId
+      const rows = await anyPrisma.aICategorization.findMany({
+        where: { userId: session.user.id },
+        orderBy: { createdAt: "desc" },
+        take: 200,
+        select: {
+          planetId: true,
+          contentPreview: true,
+          reasoning: true,
+          alternatives: true,
+          suggestedFolder: true,
+        },
+      });
+
+      const previewPairs = rows
+        .filter(
+          (r: any) =>
+            typeof r?.contentPreview === "string" &&
+            typeof r?.reasoning === "string",
+        )
+        .map((r: any) => ({
+          key: normalize(r.contentPreview as string),
+          value: r.reasoning as string,
+        }));
+
+      const previewAltPairs = rows
+        .filter(
+          (r: any) =>
+            typeof r?.contentPreview === "string" &&
+            Array.isArray(r?.alternatives),
+        )
+        .map((r: any) => ({
+          key: normalize(r.contentPreview as string),
+          value: (r.alternatives as string[]).filter(
+            (x) => typeof x === "string",
+          ),
+        }));
+
+      for (const r of rows) {
+        if (r?.planetId && typeof r.reasoning === "string") {
+          planetIdToReason[r.planetId as string] = r.reasoning as string;
+        }
+        if (r?.planetId && Array.isArray(r?.alternatives)) {
+          planetIdToAlternatives[r.planetId as string] = (
+            r.alternatives as string[]
+          ).filter((x) => typeof x === "string");
+        }
+        // Image enrichment: expect contentPreview like "[image] <objectKey>"
+        if (
+          typeof r?.contentPreview === "string" &&
+          r.contentPreview.startsWith("[image] ")
+        ) {
+          const key = r.contentPreview.slice("[image] ".length).trim();
+          if (key) {
+            if (typeof r?.reasoning === "string")
+              imageKeyToReason[key] = r.reasoning as string;
+            if (Array.isArray(r?.alternatives))
+              imageKeyToAlternatives[key] = (r.alternatives as string[]).filter(
+                (x) => typeof x === "string",
+              );
+          }
+        }
+        // Document enrichment: expect contentPreview like "[pdf] <objectKey>"
+        if (
+          typeof r?.contentPreview === "string" &&
+          r.contentPreview.startsWith("[pdf] ")
+        ) {
+          const key = r.contentPreview.slice("[pdf] ".length).trim();
+          if (key) {
+            if (typeof r?.reasoning === "string")
+              docKeyToReason[key] = r.reasoning as string;
+            if (Array.isArray(r?.alternatives))
+              docKeyToAlternatives[key] = (r.alternatives as string[]).filter(
+                (x) => typeof x === "string",
+              );
+          }
+        }
+      }
+
+      function findReasonFor(content: string): string | undefined {
+        const key = normalize(content);
+        // Exact match first
+        const exact = previewPairs.find((p: any) => p.key === key);
+        if (exact) return exact.value;
+        // Prefix/contains fallback (handles minor edits)
+        const contains = previewPairs.find(
+          (p: any) => key.startsWith(p.key) || p.key.startsWith(key),
+        );
+        return contains?.value;
+      }
+
+      function findAlternativesFor(content: string): string[] | undefined {
+        const key = normalize(content);
+        const exact = previewAltPairs.find((p: any) => p.key === key);
+        if (exact) return exact.value;
+        const contains = previewAltPairs.find(
+          (p: any) => key.startsWith(p.key) || p.key.startsWith(key),
+        );
+        return contains?.value;
+      }
+
+      // Build map for quick lookups
+      for (const g of galaxies) {
+        for (const p of g.planets) {
+          const r = planetIdToReason[p.id] ?? findReasonFor(p.content);
+          const a =
+            planetIdToAlternatives[p.id] ?? findAlternativesFor(p.content);
+          if (r) contentToReason[normalize(p.content)] = r;
+          if (a && a.length) contentToAlternatives[normalize(p.content)] = a;
+        }
+      }
+      for (const p of orphanedPlanets) {
+        const r = planetIdToReason[p.id] ?? findReasonFor(p.content);
+        const a =
+          planetIdToAlternatives[p.id] ?? findAlternativesFor(p.content);
+        if (r) contentToReason[normalize(p.content)] = r;
+        if (a && a.length) contentToAlternatives[normalize(p.content)] = a;
+      }
+    }
+    // Fallback when Prisma client lacks AICategorization model: query via raw SQL
+    else if (typeof (prisma as any).$queryRawUnsafe === "function") {
+      const rows: Array<{
+        planetId: string | null;
+        contentPreview: string | null;
+        reasoning: string | null;
+        alternatives: string[] | null;
+        userId: string;
+      }> = await (prisma as any).$queryRawUnsafe(
+        `select "planetId", "contentPreview", "reasoning", "alternatives", "userId" from "AICategorization" where "userId" = $1 order by "createdAt" desc limit 500`,
+        session.user.id,
+      );
+
+      const previewPairs = rows
+        .filter(
+          (r) =>
+            typeof r?.contentPreview === "string" &&
+            typeof r?.reasoning === "string",
+        )
+        .map((r) => ({
+          key: normalize(r.contentPreview as string),
+          value: r.reasoning as string,
+        }));
+
+      const previewAltPairs = rows
+        .filter(
+          (r) =>
+            typeof r?.contentPreview === "string" &&
+            Array.isArray(r?.alternatives),
+        )
+        .map((r) => ({
+          key: normalize(r.contentPreview as string),
+          value: (r.alternatives as string[]).filter(
+            (x) => typeof x === "string",
+          ),
+        }));
+
+      for (const r of rows) {
+        if (r?.planetId && typeof r.reasoning === "string") {
+          planetIdToReason[r.planetId as string] = r.reasoning as string;
+        }
+        if (r?.planetId && Array.isArray(r?.alternatives)) {
+          planetIdToAlternatives[r.planetId as string] = (
+            r.alternatives as string[]
+          ).filter((x) => typeof x === "string");
+        }
+        if (
+          typeof r?.contentPreview === "string" &&
+          r.contentPreview.startsWith("[image] ")
+        ) {
+          const key = r.contentPreview.slice("[image] ".length).trim();
+          if (key) {
+            if (typeof r?.reasoning === "string")
+              imageKeyToReason[key] = r.reasoning as string;
+            if (Array.isArray(r?.alternatives))
+              imageKeyToAlternatives[key] = (r.alternatives as string[]).filter(
+                (x) => typeof x === "string",
+              );
+          }
+        }
+        if (
+          typeof r?.contentPreview === "string" &&
+          r.contentPreview.startsWith("[pdf] ")
+        ) {
+          const key = r.contentPreview.slice("[pdf] ".length).trim();
+          if (key) {
+            if (typeof r?.reasoning === "string")
+              docKeyToReason[key] = r.reasoning as string;
+            if (Array.isArray(r?.alternatives))
+              docKeyToAlternatives[key] = (r.alternatives as string[]).filter(
+                (x) => typeof x === "string",
+              );
+          }
+        }
+      }
+
+      function findReasonFor(content: string): string | undefined {
+        const key = normalize(content);
+        const exact = previewPairs.find((p: any) => p.key === key);
+        if (exact) return exact.value;
+        const contains = previewPairs.find(
+          (p: any) => key.startsWith(p.key) || p.key.startsWith(key),
+        );
+        return contains?.value;
+      }
+
+      function findAlternativesFor(content: string): string[] | undefined {
+        const key = normalize(content);
+        const exact = previewAltPairs.find((p: any) => p.key === key);
+        if (exact) return exact.value;
+        const contains = previewAltPairs.find(
+          (p: any) => key.startsWith(p.key) || p.key.startsWith(key),
+        );
+        return contains?.value;
+      }
+
+      for (const g of galaxies) {
+        for (const p of g.planets) {
+          const r = planetIdToReason[p.id] ?? findReasonFor(p.content);
+          const a =
+            planetIdToAlternatives[p.id] ?? findAlternativesFor(p.content);
+          if (r) contentToReason[normalize(p.content)] = r;
+          if (a && a.length) contentToAlternatives[normalize(p.content)] = a;
+        }
+      }
+      for (const p of orphanedPlanets) {
+        const r = planetIdToReason[p.id] ?? findReasonFor(p.content);
+        const a =
+          planetIdToAlternatives[p.id] ?? findAlternativesFor(p.content);
+        if (r) contentToReason[normalize(p.content)] = r;
+        if (a && a.length) contentToAlternatives[normalize(p.content)] = a;
+      }
+    }
+  } catch {
+    // If the table or client isn't available, skip enrichment silently
+  }
+
+  // Add signed URLs to images and enrich planets
+  const enrichedGalaxies = await Promise.all(
+    galaxies.map(async (g) => {
+      const signedImages = await Promise.all(
+        (g.images || []).map(async (img: any) => {
+          try {
+            const res = await supabaseAdmin.storage
+              .from(img.bucket)
+              .createSignedUrl(img.objectKey, 60 * 60);
+            return {
+              ...img,
+              signedUrl: res.data?.signedUrl || null,
+              reasoning: imageKeyToReason[img.objectKey] ?? null,
+              alternatives: imageKeyToAlternatives[img.objectKey] ?? [],
+            };
+          } catch {
+            return {
+              ...img,
+              signedUrl: null,
+              reasoning: null,
+              alternatives: [],
+            };
+          }
+        }),
+      );
+      const signedDocs = await Promise.all(
+        (g as any).documents.map(async (doc: any) => {
+          try {
+            const res = await supabaseAdmin.storage
+              .from(doc.bucket)
+              .createSignedUrl(doc.objectKey, 60 * 60);
+            return {
+              ...doc,
+              signedUrl: res.data?.signedUrl || null,
+              reasoning: docKeyToReason[doc.objectKey] ?? null,
+              alternatives: docKeyToAlternatives[doc.objectKey] ?? [],
+            };
+          } catch {
+            return {
+              ...doc,
+              signedUrl: null,
+              reasoning: null,
+              alternatives: [],
+            };
+          }
+        }),
+      );
+      return {
+        ...g,
+        images: signedImages,
+        documents: signedDocs,
+        planets: g.planets.map((p) => ({
+          ...p,
+          reasoning:
+            planetIdToReason[p.id] ??
+            contentToReason[normalize(p.content)] ??
+            null,
+          alternatives:
+            planetIdToAlternatives[p.id] ??
+            contentToAlternatives[normalize(p.content)] ??
+            [],
+        })),
+      };
+    }),
+  );
+  const enrichedOrphaned = orphanedPlanets.map((p) => ({
+    ...p,
+    reasoning:
+      planetIdToReason[p.id] ?? contentToReason[normalize(p.content)] ?? null,
+    alternatives:
+      planetIdToAlternatives[p.id] ??
+      contentToAlternatives[normalize(p.content)] ??
+      [],
+  }));
+
+  // Sign orphaned images
+  const orphanedSignedImages = await Promise.all(
+    orphanedImages.map(async (img: any) => {
+      try {
+        const res = await supabaseAdmin.storage
+          .from(img.bucket)
+          .createSignedUrl(img.objectKey, 60 * 60);
+        return {
+          ...img,
+          signedUrl: res.data?.signedUrl || null,
+          reasoning: imageKeyToReason[img.objectKey] ?? null,
+          alternatives: imageKeyToAlternatives[img.objectKey] ?? [],
+        };
+      } catch {
+        return { ...img, signedUrl: null, reasoning: null, alternatives: [] };
+      }
+    }),
+  );
+
+  const orphanedSignedDocs = await Promise.all(
+    orphanedDocuments.map(async (doc: any) => {
+      try {
+        const res = await supabaseAdmin.storage
+          .from(doc.bucket)
+          .createSignedUrl(doc.objectKey, 60 * 60);
+        return {
+          ...doc,
+          signedUrl: res.data?.signedUrl || null,
+          reasoning: docKeyToReason[doc.objectKey] ?? null,
+          alternatives: docKeyToAlternatives[doc.objectKey] ?? [],
+        };
+      } catch {
+        return { ...doc, signedUrl: null, reasoning: null, alternatives: [] };
+      }
+    }),
+  );
 
   // Always show virtual galaxy for adding new folder names
-  const result: any[] = [...galaxies];
+  const result: any[] = [...enrichedGalaxies];
 
   // ALWAYS add virtual galaxy to allow creating new folders
   result.push({
     id: "orphaned-planets", // Virtual ID
     name: "Orphaned Planets",
-    planets: orphanedPlanets.length > 0 ? orphanedPlanets : [],
-    _count: { planets: orphanedPlanets.length },
+    images: orphanedSignedImages,
+    documents: orphanedSignedDocs,
+    planets: enrichedOrphaned.length > 0 ? enrichedOrphaned : [],
+    _count: { planets: enrichedOrphaned.length },
     isVirtual: true,
   });
-
-  console.log("API - Total Folders returned:", result.length);
 
   return NextResponse.json(result);
 }
@@ -74,26 +489,22 @@ export async function DELETE(req: NextRequest) {
   const { type, id } = await req.json();
 
   // Validate required fields
-  if (!type) {
-    return NextResponse.json({ error: "Type is required" }, { status: 400 });
+  if (!type || !id) {
+    return NextResponse.json(
+      { error: "Type and ID are required" },
+      { status: 400 },
+    );
   }
 
   if (type === "planet") {
-    if (!id) {
-      return NextResponse.json(
-        { error: "ID is required for planet deletion" },
-        { status: 400 },
-      );
-    }
-
-    const res = await prisma.planet.deleteMany({
+    const res = await prisma.planet.delete({
       where: {
         userId: session.user.id,
         id: id,
       },
     });
 
-    if (res.count === 0) {
+    if (!res) {
       return NextResponse.json(
         { error: "Planet not found or already deleted" },
         { status: 404 },
@@ -102,13 +513,6 @@ export async function DELETE(req: NextRequest) {
 
     return NextResponse.json(res);
   } else if (type === "folder") {
-    if (!id) {
-      return NextResponse.json(
-        { error: "ID is required for Folder deletion" },
-        { status: 400 },
-      );
-    }
-
     // Check if this is the default "Orphaned Planets" folder (virtual folder)
     if (id === "orphaned-planets") {
       return NextResponse.json(
@@ -117,7 +521,61 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
-    // Use transaction to ensure atomicity
+    // Pre-fetch all images and documents in this galaxy (for storage cleanup)
+    const [imagesInGalaxy, documentsInGalaxy] = await Promise.all([
+      prisma.image.findMany({
+        where: {
+          userId: session.user.id,
+          galaxies: { some: { id } },
+        },
+        select: { id: true, bucket: true, objectKey: true },
+      }),
+      prisma.document.findMany({
+        where: {
+          userId: session.user.id,
+          galaxies: { some: { id } },
+        },
+        select: { id: true, bucket: true, objectKey: true },
+      }),
+    ]);
+
+    // Best-effort: remove storage objects for images and documents in this folder
+    try {
+      if (imagesInGalaxy.length > 0) {
+        const byBucket: Record<string, string[]> = {};
+        for (const img of imagesInGalaxy) {
+          if (!byBucket[img.bucket]) byBucket[img.bucket] = [];
+          byBucket[img.bucket]?.push(img.objectKey);
+        }
+        await Promise.all(
+          Object.entries(byBucket).map(async ([bucket, keys]) => {
+            try {
+              if (keys && keys.length > 0) {
+                await supabaseAdmin.storage.from(bucket).remove(keys);
+              }
+            } catch {}
+          }),
+        );
+      }
+      if (documentsInGalaxy.length > 0) {
+        const byBucket: Record<string, string[]> = {};
+        for (const d of documentsInGalaxy) {
+          if (!byBucket[d.bucket]) byBucket[d.bucket] = [];
+          byBucket[d.bucket]?.push(d.objectKey);
+        }
+        await Promise.all(
+          Object.entries(byBucket).map(async ([bucket, keys]) => {
+            try {
+              if (keys && keys.length > 0) {
+                await supabaseAdmin.storage.from(bucket).remove(keys);
+              }
+            } catch {}
+          }),
+        );
+      }
+    } catch {}
+
+    // Use transaction to ensure atomicity of DB changes
     const result = await prisma.$transaction(async (tx) => {
       // First, find all planets in this galaxy
       const planetsInGalaxy = await tx.planet.findMany({
@@ -142,6 +600,18 @@ export async function DELETE(req: NextRequest) {
         });
       }
 
+      // Delete image and document rows that were inside this folder
+      if (imagesInGalaxy.length > 0) {
+        await tx.image.deleteMany({
+          where: { id: { in: imagesInGalaxy.map((i) => i.id) } },
+        });
+      }
+      if (documentsInGalaxy.length > 0) {
+        await tx.document.deleteMany({
+          where: { id: { in: documentsInGalaxy.map((d) => d.id) } },
+        });
+      }
+
       // Then delete the galaxy
       const res = await tx.galaxy.deleteMany({
         where: {
@@ -161,12 +631,104 @@ export async function DELETE(req: NextRequest) {
     }
 
     return NextResponse.json(result);
+  } else if (type === "image") {
+    // Look up image first to get storage path and verify ownership
+    const img = await prisma.image.findFirst({
+      where: { id, userId: session.user.id },
+      select: { id: true, bucket: true, objectKey: true },
+    });
+
+    if (!img) {
+      return NextResponse.json(
+        { error: "Image not found or already deleted" },
+        { status: 404 },
+      );
+    }
+
+    // Attempt to remove from Supabase storage (best-effort)
+    try {
+      const { error } = await supabaseAdmin.storage
+        .from(img.bucket)
+        .remove([img.objectKey]);
+      if (error) {
+        console.warn(
+          "[storage] remove failed",
+          img.bucket,
+          img.objectKey,
+          error.message,
+        );
+      }
+    } catch (e: any) {
+      console.warn("[storage] exception during remove", e?.message || e);
+    }
+
+    // Remove DB row
+    try {
+      await prisma.image.delete({ where: { id: img.id } });
+    } catch (e: any) {
+      return NextResponse.json(
+        { error: "Failed to delete image row" },
+        { status: 500 },
+      );
+    }
+  } else if (type === "document") {
+    // Look up document first to get storage path and verify ownership
+    const doc = await prisma.document.findFirst({
+      where: { id, userId: session.user.id },
+      select: { id: true, bucket: true, objectKey: true },
+    });
+
+    if (!doc) {
+      return NextResponse.json(
+        { error: "Document not found or already deleted" },
+        { status: 404 },
+      );
+    }
+
+    // Attempt to remove from Supabase storage (best-effort)
+    try {
+      const { error } = await supabaseAdmin.storage
+        .from(doc.bucket)
+        .remove([doc.objectKey]);
+      if (error) {
+        console.warn(
+          "[storage] remove failed",
+          doc.bucket,
+          doc.objectKey,
+          error.message,
+        );
+      }
+    } catch (e: any) {
+      console.warn("[storage] exception during remove", e?.message || e);
+    }
+
+    // Remove DB row
+    try {
+      await prisma.document.delete({ where: { id: doc.id } });
+    } catch (e: any) {
+      return NextResponse.json(
+        { error: "Failed to delete document row" },
+        { status: 500 },
+      );
+    }
   } else {
     return NextResponse.json(
       { error: "Invalid type. Must be 'planet' or 'folder'" },
       { status: 400 },
     );
   }
+
+  // After deletions, remove any folders that became empty
+  await prisma.galaxy.deleteMany({
+    where: {
+      userId: session.user.id,
+      planets: { none: {} },
+      images: { none: {} },
+      documents: { none: {} },
+    },
+  });
+
+  return NextResponse.json({ ok: true });
 }
 
 export async function PUT(req: NextRequest) {
@@ -247,5 +809,376 @@ export async function PUT(req: NextRequest) {
     }
     console.error("Update error:", error);
     return NextResponse.json({ error: "Update failed" }, { status: 500 });
+  }
+}
+
+export async function POST(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const body = await req.json().catch(() => ({}));
+    const action = body?.action;
+    if (
+      action !== "attachPlanetToFolder" &&
+      action !== "attachImageToFolder" &&
+      action !== "attachDocumentToFolder"
+    ) {
+      return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+    }
+
+    const planetId: string | undefined = body?.planetId;
+    const imageId: string | undefined = body?.imageId;
+    const documentId: string | undefined = body?.documentId;
+    const rawFolderName: string | undefined = body?.folderName;
+    const folderName = (rawFolderName ?? "").toString().trim().slice(0, 80);
+
+    if (action === "attachPlanetToFolder") {
+      if (!planetId || !folderName) {
+        return NextResponse.json(
+          { error: "planetId and folderName are required" },
+          { status: 400 },
+        );
+      }
+    } else if (action === "attachImageToFolder") {
+      if (!imageId || !folderName) {
+        return NextResponse.json(
+          { error: "imageId and folderName are required" },
+          { status: 400 },
+        );
+      }
+    } else if (action === "attachDocumentToFolder") {
+      if (!documentId || !folderName) {
+        return NextResponse.json(
+          { error: "documentId and folderName are required" },
+          { status: 400 },
+        );
+      }
+    }
+
+    if (action === "attachPlanetToFolder") {
+      // Verify planet belongs to user
+      const planet = await prisma.planet.findFirst({
+        where: { id: planetId, userId: session.user.id },
+        select: { id: true },
+      });
+      if (!planet) {
+        return NextResponse.json(
+          { error: "Planet not found" },
+          { status: 404 },
+        );
+      }
+    }
+
+    // Find or create the folder for this user
+    let folder = await prisma.galaxy.findFirst({
+      where: { userId: session.user.id, name: folderName },
+      select: { id: true },
+    });
+    if (!folder) {
+      try {
+        folder = await prisma.galaxy.create({
+          data: { userId: session.user.id, name: folderName, shareable: false },
+          select: { id: true },
+        });
+      } catch (e: any) {
+        if (e?.code === "P2002") {
+          folder = await prisma.galaxy.findFirst({
+            where: { userId: session.user.id, name: folderName },
+            select: { id: true },
+          });
+        } else {
+          throw e;
+        }
+      }
+    }
+    if (!folder) {
+      return NextResponse.json(
+        { error: "Folder resolution failed" },
+        { status: 500 },
+      );
+    }
+
+    if (action === "attachPlanetToFolder") {
+      // Move planet: disconnect from all existing folders for this user, then connect to the selected folder
+      await prisma.$transaction(async (tx) => {
+        const existing = await tx.galaxy.findMany({
+          where: {
+            userId: session.user.id,
+            planets: { some: { id: planetId } },
+          },
+          select: { id: true },
+        });
+
+        if (existing.length > 0) {
+          await tx.planet.update({
+            where: { id: planetId },
+            data: {
+              galaxies: {
+                disconnect: existing.map((g) => ({ id: g.id })),
+              },
+            },
+          });
+        }
+
+        // Now connect to the target folder (idempotent-ish; if already present, it's fine)
+        await tx.planet.update({
+          where: { id: planetId },
+          data: { galaxies: { connect: { id: folder.id } } },
+        });
+
+        // Update acceptedFolder in AI categorization records for this planet
+        try {
+          const updateResult = await tx.$executeRawUnsafe(
+            `UPDATE "AICategorization" SET "acceptedFolder" = $1 WHERE "planetId" = $2 AND "userId" = $3`,
+            folderName,
+            planetId,
+            session.user.id,
+          );
+          console.log(
+            `[AI] Updated ${updateResult} AICategorization record(s) for planet ${planetId} to acceptedFolder="${folderName}"`,
+          );
+        } catch (aiUpdateError: any) {
+          console.warn(
+            "Could not update AICategorization.acceptedFolder:",
+            aiUpdateError?.message,
+          );
+        }
+
+        // Auto-delete any folders that became empty (excluding the target folder)
+        const candidateIds = existing
+          .map((g) => g.id)
+          .filter((id) => id !== folder!.id);
+        if (candidateIds.length > 0) {
+          const deletedCount = await tx.galaxy.deleteMany({
+            where: {
+              userId: session.user.id,
+              id: { in: candidateIds },
+              planets: { none: {} },
+            },
+          });
+          if (deletedCount.count > 0) {
+            console.log(
+              `[Cleanup] Auto-deleted ${deletedCount.count} empty folder(s)`,
+            );
+          }
+        }
+      });
+
+      return NextResponse.json({ ok: true, folderId: folder.id, moved: true });
+    } else if (action === "attachImageToFolder") {
+      // Verify image and compute new storage key
+      const image = await prisma.image.findFirst({
+        where: { id: imageId!, userId: session.user.id },
+        select: { id: true, bucket: true, objectKey: true },
+      });
+      if (!image) {
+        return NextResponse.json({ error: "Image not found" }, { status: 404 });
+      }
+
+      function slugify(input: string): string {
+        return String(input)
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/(^-|-$)+/g, "");
+      }
+      const fileName = image.objectKey.split("/").pop() || image.objectKey;
+      const newKey = `${session.user.id}/${slugify(folderName)}/${fileName}`;
+
+      // Move storage object then update DB relations
+      try {
+        const { error } = await supabaseAdmin.storage
+          .from(image.bucket)
+          .move(image.objectKey, newKey);
+        if (error) {
+          return NextResponse.json(
+            { error: `Move failed: ${error.message}` },
+            { status: 500 },
+          );
+        }
+      } catch (e: any) {
+        return NextResponse.json(
+          { error: e?.message || "Move failed" },
+          { status: 500 },
+        );
+      }
+
+      await prisma.$transaction(async (tx) => {
+        // Disconnect from existing folders for this user and connect to target
+        const existing = await tx.galaxy.findMany({
+          where: {
+            userId: session.user.id,
+            images: { some: { id: image.id } },
+          },
+          select: { id: true },
+        });
+        if (existing.length > 0) {
+          await tx.image.update({
+            where: { id: image.id },
+            data: {
+              galaxies: { disconnect: existing.map((g) => ({ id: g.id })) },
+            },
+          });
+        }
+        await tx.image.update({
+          where: { id: image.id },
+          data: { objectKey: newKey, galaxies: { connect: { id: folder.id } } },
+        });
+
+        // Update acceptedFolder on AI categorization rows for this image (match by contentPreview string)
+        try {
+          // 1) Update acceptedFolder
+          await tx.$executeRawUnsafe(
+            `UPDATE "AICategorization" SET "acceptedFolder" = $1 WHERE "userId" = $2 AND "contentPreview" = $3`,
+            folderName,
+            session.user.id,
+            `[image] ${image.objectKey}`,
+          );
+          // 2) Keep reasoning/alternatives discoverable by updating contentPreview to the new objectKey
+          await tx.$executeRawUnsafe(
+            `UPDATE "AICategorization" SET "contentPreview" = $1 WHERE "userId" = $2 AND "contentPreview" = $3`,
+            `[image] ${newKey}`,
+            session.user.id,
+            `[image] ${image.objectKey}`,
+          );
+        } catch {}
+
+        // Clean up any empty folders (excluding target)
+        const candidateIds = existing
+          .map((g) => g.id)
+          .filter((id) => id !== folder!.id);
+        if (candidateIds.length > 0) {
+          await tx.galaxy.deleteMany({
+            where: {
+              userId: session.user.id,
+              id: { in: candidateIds },
+              planets: { none: {} },
+              images: { none: {} },
+            },
+          });
+        }
+      });
+
+      return NextResponse.json({
+        ok: true,
+        folderId: folder.id,
+        moved: true,
+        newKey,
+      });
+    } else if (action === "attachDocumentToFolder") {
+      // Verify document and compute new storage key
+      const document = await prisma.document.findFirst({
+        where: { id: documentId!, userId: session.user.id },
+        select: { id: true, bucket: true, objectKey: true },
+      });
+      if (!document) {
+        return NextResponse.json(
+          { error: "Document not found" },
+          { status: 404 },
+        );
+      }
+
+      function slugify(input: string): string {
+        return String(input)
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/(^-|-$)+/g, "");
+      }
+      const docFileName =
+        document.objectKey.split("/").pop() || document.objectKey;
+      const newDocKey = `${session.user.id}/${slugify(folderName)}/${docFileName}`;
+
+      try {
+        const { error } = await supabaseAdmin.storage
+          .from(document.bucket)
+          .move(document.objectKey, newDocKey);
+        if (error) {
+          return NextResponse.json(
+            { error: `Move failed: ${error.message}` },
+            { status: 500 },
+          );
+        }
+      } catch (e: any) {
+        return NextResponse.json(
+          { error: e?.message || "Move failed" },
+          { status: 500 },
+        );
+      }
+
+      await prisma.$transaction(async (tx) => {
+        // Disconnect from existing folders for this user and connect to target
+        const existing = await tx.galaxy.findMany({
+          where: {
+            userId: session.user.id,
+            documents: { some: { id: document.id } },
+          },
+          select: { id: true },
+        });
+        if (existing.length > 0) {
+          await tx.document.update({
+            where: { id: document.id },
+            data: {
+              galaxies: { disconnect: existing.map((g) => ({ id: g.id })) },
+            },
+          });
+        }
+        await tx.document.update({
+          where: { id: document.id },
+          data: {
+            objectKey: newDocKey,
+            galaxies: { connect: { id: folder.id } },
+          },
+        });
+
+        // Update acceptedFolder on AI categorization rows for this document (match by contentPreview string)
+        try {
+          await tx.$executeRawUnsafe(
+            `UPDATE "AICategorization" SET "acceptedFolder" = $1 WHERE "userId" = $2 AND "contentPreview" = $3`,
+            folderName,
+            session.user.id,
+            `[pdf] ${document.objectKey}`,
+          );
+          await tx.$executeRawUnsafe(
+            `UPDATE "AICategorization" SET "contentPreview" = $1 WHERE "userId" = $2 AND "contentPreview" = $3`,
+            `[pdf] ${newDocKey}`,
+            session.user.id,
+            `[pdf] ${document.objectKey}`,
+          );
+        } catch {}
+
+        // Clean up any empty folders (excluding target)
+        const candidateIds = existing
+          .map((g) => g.id)
+          .filter((id) => id !== folder!.id);
+        if (candidateIds.length > 0) {
+          await tx.galaxy.deleteMany({
+            where: {
+              userId: session.user.id,
+              id: { in: candidateIds },
+              planets: { none: {} },
+              images: { none: {} },
+              documents: { none: {} },
+            },
+          });
+        }
+      });
+
+      return NextResponse.json({
+        ok: true,
+        folderId: folder.id,
+        moved: true,
+        newKey: newDocKey,
+      });
+    }
+
+    // Exhaustiveness guard to satisfy Next.js typing: ensure a response is always returned
+    return NextResponse.json({ error: "Unhandled action" }, { status: 400 });
+  } catch (error) {
+    console.error("Dashboard POST error:", error);
+    return NextResponse.json({ error: "Request failed" }, { status: 500 });
   }
 }

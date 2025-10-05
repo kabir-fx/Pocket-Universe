@@ -9,11 +9,25 @@ interface Planet {
   id: string;
   content: string;
   createdAt: Date;
+  reasoning?: string | null;
+  alternatives?: string[];
 }
 
 interface Galaxy {
   id: string;
   name: string;
+  images?: {
+    id: string;
+    signedUrl: string | null;
+    contentType: string;
+    createdAt: string;
+  }[];
+  documents?: {
+    id: string;
+    signedUrl: string | null;
+    contentType: string;
+    createdAt: string;
+  }[];
   planets: Planet[];
   _count: { planets: number };
 }
@@ -167,6 +181,8 @@ function Dashboard() {
           key={galaxy.id}
           id={galaxy.id}
           name={galaxy.name}
+          images={galaxy.images || []}
+          documents={galaxy.documents || []}
           planets={galaxy.planets}
           planetCount={galaxy._count.planets}
           onEdit={handleEditGalaxy}

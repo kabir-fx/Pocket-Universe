@@ -1,0 +1,258 @@
+import { getGeminiModel } from "./gemini_client";
+import { GoogleAIFileManager } from "@google/generative-ai/server";
+
+export interface CategorizationResult {
+  suggestedFolder: string;
+  confidence: number;
+  alternatives: string[];
+  reasoning: string;
+}
+
+export interface ContentAnalysis {
+  content: string;
+  userId: string;
+  existingFolders: string[];
+  userCorrections?: Array<{
+    originalContent: string;
+    suggestedFolder: string;
+    acceptedFolder: string;
+  }>;
+}
+
+export interface ImageAnalysis {
+  imageBase64: string;
+  mimeType: string;
+  userId: string;
+  existingFolders: string[];
+  userCorrections?: Array<{
+    originalContent: string;
+    suggestedFolder: string;
+    acceptedFolder: string;
+  }>;
+  filename?: string;
+}
+
+export interface PdfAnalysis {
+  bytes: Buffer; // raw PDF bytes
+  userId: string;
+  filename?: string;
+  existingFolders: string[];
+  userCorrections?: Array<{
+    originalContent: string;
+    suggestedFolder: string;
+    acceptedFolder: string;
+  }>;
+}
+
+function buildPdfPrompt(a: PdfAnalysis) {
+  let p = `You are classifying this PDF into a concise user folder name.
+Rules:
+- Return JSON only with keys: category, confidence (0..1), reasoning (<=200 chars), alternatives (3-4).
+- Prefer an existing folder name when appropriate.
+`;
+  if (a.existingFolders?.length)
+    p += `Existing folders: ${a.existingFolders.join(", ")}\n`;
+  if (a.userCorrections?.length) {
+    p += `User past overrides:\n${a.userCorrections
+      .map(
+        (c) =>
+          `content:"${c.originalContent.slice(0, 50)}..." → suggested:"${c.suggestedFolder}" → user:"${c.acceptedFolder}"`,
+      )
+      .join("\n")}\n`;
+  }
+  if (a.filename) p += `Filename hint: ${a.filename}\n`;
+  p += `Return JSON only.`;
+  return p;
+}
+
+export async function categorizePdf(
+  a: PdfAnalysis,
+): Promise<CategorizationResult> {
+  const model = getGeminiModel();
+  const fileManager = new GoogleAIFileManager(process.env.GEMINI_API_KEY!);
+
+  // Upload PDF to Gemini Files API
+  const upload = await fileManager.uploadFile(a.bytes, {
+    mimeType: "application/pdf",
+    displayName: a.filename ?? "document.pdf",
+  });
+
+  // Use fileData per Gemini docs
+  const res = await model.generateContent([
+    { fileData: { fileUri: upload.file.uri, mimeType: "application/pdf" } },
+    { text: buildPdfPrompt(a) },
+  ]);
+  const text = await res.response.text();
+  return parseJsonResponse(text);
+}
+
+function buildImageCategorizationPrompt(a: ImageAnalysis): string {
+  let prompt =
+    `You are classifying an image into a concise user folder name.\n` +
+    `Rules:\n` +
+    `- Return JSON only with keys: category (string), confidence (0..1), reasoning (<=200 chars), alternatives (3-4 plausible names).\n` +
+    `- Prefer an existing folder name when semantically appropriate.\n`;
+  if (a.existingFolders && a.existingFolders.length > 0) {
+    prompt += `Existing folders: ${a.existingFolders.join(", ")}\n`;
+  }
+  if (a.userCorrections && a.userCorrections.length > 0) {
+    prompt +=
+      `User past overrides:\n` +
+      a.userCorrections
+        .map(
+          (c) =>
+            `content:"${c.originalContent.substring(0, 50)}..." → suggested:"${c.suggestedFolder}" → user:"${c.acceptedFolder}"`,
+        )
+        .join("\n") +
+      "\n";
+  }
+  if (a.filename) {
+    prompt += `Filename hint: ${a.filename}\n`;
+  }
+  prompt += `Return JSON only.\n`;
+  return prompt;
+}
+
+export async function categorizeImage(
+  analysis: ImageAnalysis,
+): Promise<CategorizationResult> {
+  const model = getGeminiModel();
+  const prompt = buildImageCategorizationPrompt(analysis);
+
+  console.log("Image prompt: " + prompt);
+
+  // Per Gemini docs, send image via inlineData alongside the prompt text
+  const parts: Array<any> = [
+    { text: prompt },
+    { inlineData: { data: analysis.imageBase64, mimeType: analysis.mimeType } },
+  ];
+
+  const result = await model.generateContent(parts);
+  const responseText = await result.response.text();
+  return parseJsonResponse(responseText);
+}
+
+export function bufferToBase64(buf: Buffer): string {
+  return buf.toString("base64");
+}
+
+// Duplicate function removed
+
+function buildCategorizationPrompt(analysis: ContentAnalysis): string {
+  const { content, existingFolders, userCorrections } = analysis;
+  let prompt = `Analyze this content and suggest the most appropriate category/folder name for organizing it.
+
+Rules:
+- Provide 1 primary category in "category".
+- Provide 3 to 4 concise alternative category names in "alternatives".
+- Alternatives must be strings, no punctuation at end, no duplicates, and must be plausible folder names.
+- Keep reasoning short (<= 200 chars).
+
+Content to categorize: "${content}"
+
+`;
+  if (existingFolders && existingFolders.length > 0) {
+    prompt += `Refer these existing categories/folders for more context: ${existingFolders.join(", ")}
+
+`;
+  }
+  if (userCorrections && userCorrections.length > 0) {
+    prompt += `User's past corrections (learn from these patterns):
+${userCorrections
+  .map(
+    (c) =>
+      `For this content: "${c.originalContent.substring(0, 50)}..." → suggested: "${c.suggestedFolder}" → user chose: "${c.acceptedFolder}"`,
+  )
+  .join("\n")}
+
+`;
+  }
+
+  // Require a compact JSON object
+  prompt += `Return ONLY a compact JSON object with exactly these keys and types:
+{
+  "category": string,
+  "confidence": number,  // 0..1
+  "reasoning": string,
+  "alternatives": string[]
+}
+No extra text, no code fences.`;
+
+  return prompt;
+}
+
+function parseJsonResponse(text: string): CategorizationResult {
+  let parsed: any;
+  try {
+    parsed = JSON.parse(text);
+  } catch (e) {
+    // Strip code fences if any slipped through
+    const cleaned = text
+      .replace(/```json[\r\n]?/gi, "")
+      .replace(/```[\r\n]?/g, "")
+      .trim();
+    parsed = JSON.parse(cleaned);
+  }
+
+  if (typeof parsed !== "object" || parsed === null)
+    throw new Error("Response is not a JSON object");
+  const { category, confidence, reasoning, alternatives } = parsed as Record<
+    string,
+    unknown
+  >;
+  if (typeof category !== "string" || category.trim() === "")
+    throw new Error("Invalid category");
+  if (typeof confidence !== "number" || !(confidence >= 0 && confidence <= 1))
+    throw new Error("Invalid confidence");
+  if (typeof reasoning !== "string") throw new Error("Invalid reasoning");
+  if (alternatives !== undefined && !Array.isArray(alternatives))
+    throw new Error("Invalid alternatives");
+
+  return {
+    suggestedFolder: category.trim(),
+    confidence,
+    alternatives: Array.isArray(alternatives)
+      ? alternatives.filter((x) => typeof x === "string")
+      : [],
+    reasoning,
+  };
+}
+
+export async function categorizeContent(analysis: ContentAnalysis) {
+  const model = getGeminiModel();
+  const prompt = buildCategorizationPrompt(analysis);
+
+  console.log("Text prompt: " + prompt);
+
+  // Use content parts per official SDK docs to avoid accidental formatting issues
+  const result = await model.generateContent([{ text: prompt }]);
+  const responseText = await result.response.text();
+  const candidates = (result.response as any).candidates ?? [];
+  const finish = candidates[0]?.finishReason;
+  const safety = candidates[0]?.safetyRatings;
+  if (process.env.NODE_ENV !== "production") {
+    const preview = responseText.slice(0, 500);
+    console.log("[AI] Gemini raw response preview:", preview);
+    console.log(
+      "[AI] finishReason:",
+      finish,
+      "safety:",
+      JSON.stringify(safety),
+    );
+    console.log("[AI] candidates:", JSON.stringify(candidates, null, 2));
+  }
+  if (!responseText || responseText.trim().length === 0) {
+    // If response was truncated (MAX_TOKENS), try once more with a more concise prompt
+    if (String(finish) === "MAX_TOKENS") {
+      const compact = `${analysis.content.slice(0, 1000)}\nReturn JSON: {category, confidence, reasoning, alternatives}`;
+      const retry = await model.generateContent([{ text: compact }]);
+      const txt = await retry.response.text();
+      if (txt && txt.trim().length > 0) return parseJsonResponse(txt);
+    }
+    throw new Error(
+      `Empty response from model. finishReason=${String(finish)} safety=${JSON.stringify(safety)}`,
+    );
+  }
+  // Strictly parse model output as JSON
+  return parseJsonResponse(responseText);
+}
