@@ -14,6 +14,13 @@ function Homeer() {
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [aiLimited, setAiLimited] = useState(false);
 
+  // Auto-dismiss success banner after 3 seconds
+  useEffect(() => {
+    if (!successMsg) return;
+    const t = setTimeout(() => setSuccessMsg(null), 3000);
+    return () => clearTimeout(t);
+  }, [successMsg]);
+
   const fetchGalaxies = async () => {
     try {
       const response = await fetch("/api/dashboard", {
