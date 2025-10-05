@@ -70,25 +70,25 @@ export async function POST(req: NextRequest) {
     } | null = null;
 
     let textContent: string | null = null;
-      const raw = isLegacyText
-        ? (body.content as string)
-        : typeof body.data?.content === "string"
-          ? (body.data.content as string)
-          : "";
-      const contentTrimmed = raw.trim().slice(0, 4000);
-      if (!contentTrimmed)
-        return NextResponse.json(
-          { error: "Missing text content" },
-          { status: 400 },
-        );
-      textContent = contentTrimmed;
-      
-      aiResponse = await categorizeContent({
-        content: contentTrimmed,
-        userId,
-        existingFolders: userFolders.map((f) => f.name),
-        userCorrections: userCorrections,
-      });
+    const raw = isLegacyText
+      ? (body.content as string)
+      : typeof body.data?.content === "string"
+        ? (body.data.content as string)
+        : "";
+    const contentTrimmed = raw.trim().slice(0, 4000);
+    if (!contentTrimmed)
+      return NextResponse.json(
+        { error: "Missing text content" },
+        { status: 400 },
+      );
+    textContent = contentTrimmed;
+
+    aiResponse = await categorizeContent({
+      content: contentTrimmed,
+      userId,
+      existingFolders: userFolders.map((f) => f.name),
+      userCorrections: userCorrections,
+    });
 
     // Validate AI response
     if (!aiResponse || !aiResponse.suggestedFolder) {
@@ -129,12 +129,12 @@ export async function POST(req: NextRequest) {
     }
 
     const planet = await prisma.planet.create({
-            data: {
-              content: textContent!,
-              userId,
-              galaxies: { connect: { id: folder.id } },
-            },
-          });
+      data: {
+        content: textContent!,
+        userId,
+        galaxies: { connect: { id: folder.id } },
+      },
+    });
 
     // Persist AI review row with fallbacks
     let reviewId: string | undefined = undefined;
@@ -163,11 +163,11 @@ export async function POST(req: NextRequest) {
         console.log("[AI] AICategorization created id=", reviewId);
       }
     } catch (err: any) {
-          console.warn(
-            "[AI] Failed to persist AICategorization (all attempts):",
-            err.message,
-          );
-        }
+      console.warn(
+        "[AI] Failed to persist AICategorization (all attempts):",
+        err.message,
+      );
+    }
 
     return NextResponse.json(
       {
