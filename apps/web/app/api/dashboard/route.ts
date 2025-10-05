@@ -1176,10 +1176,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Exhaustiveness guard to satisfy Next.js typing: ensure a response is always returned
-    return NextResponse.json(
-      { error: "Unhandled action" },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "Unhandled action" }, { status: 400 });
   } catch (error) {
     console.error("Dashboard POST error:", error);
     return NextResponse.json({ error: "Request failed" }, { status: 500 });
