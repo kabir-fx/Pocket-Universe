@@ -18,12 +18,6 @@ export interface ContentAnalysis {
   }>;
 }
 
-// Duplicate block removed
-
-// =====================
-// Image categorization
-// =====================
-
 export interface ImageAnalysis {
   imageBase64: string;
   mimeType: string;
@@ -69,6 +63,8 @@ export async function categorizeImage(
 ): Promise<CategorizationResult> {
   const model = getGeminiModel();
   const prompt = buildImageCategorizationPrompt(analysis);
+
+  console.log("Image prompt: " + prompt);
 
   // Per Gemini docs, send image via inlineData alongside the prompt text
   const parts: Array<any> = [
@@ -171,7 +167,7 @@ export async function categorizeContent(analysis: ContentAnalysis) {
   const model = getGeminiModel();
   const prompt = buildCategorizationPrompt(analysis);
 
-  console.log("Prompt: " + prompt);
+  console.log("Text prompt: " + prompt);
 
   // Use content parts per official SDK docs to avoid accidental formatting issues
   const result = await model.generateContent([{ text: prompt }]);

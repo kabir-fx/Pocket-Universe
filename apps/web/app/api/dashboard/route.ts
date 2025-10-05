@@ -74,11 +74,11 @@ export async function GET() {
     orderBy: { createdAt: "desc" },
   });
 
-  // Try to enrich planets with AI reasoning and alternatives using planetId link first, fallback to content match
-  let planetIdToReason: Record<string, string> = {};
-  let contentToReason: Record<string, string> = {};
-  let planetIdToAlternatives: Record<string, string[]> = {};
-  let contentToAlternatives: Record<string, string[]> = {};
+  const planetIdToReason: Record<string, string> = {};
+  const contentToReason: Record<string, string> = {};
+  const planetIdToAlternatives: Record<string, string[]> = {};
+  const contentToAlternatives: Record<string, string[]> = {};
+
   // For images, map objectKey => reasoning/alternatives when available
   const imageKeyToReason: Record<string, string> = {};
   const imageKeyToAlternatives: Record<string, string[]> = {};

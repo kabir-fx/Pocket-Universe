@@ -6,6 +6,7 @@ import { randomUUID, createHash } from "crypto";
 import { supabaseAdmin } from "../../../../lib/supabase/supabaseAdmin";
 import prisma from "@repo/db/prisma";
 import { categorizeImage, bufferToBase64 } from "@repo/ai";
+import { getUserCorrections } from "../../user.corrections";
 
 const BUCKET = "user-images";
 const MAX_IMG_SIZE = 6 * 1024 * 1024; // ~6MB
@@ -105,11 +106,16 @@ export async function POST(req: NextRequest) {
           select: { name: true },
           take: 100,
         });
+
+        // Collect user's past corrections (acceptedFolder overrides suggestedFolder)
+        const userCorrections = await getUserCorrections(userId);
+
         const ai = await categorizeImage({
           imageBase64: bufferToBase64(buffer),
           mimeType: normalizedCT,
           userId,
           existingFolders: userFolders.map((f) => f.name),
+          userCorrections,
         });
         aiResult = ai;
         const minConf = Number(process.env.IMG_AI_MIN_CONFIDENCE ?? 0.55);
