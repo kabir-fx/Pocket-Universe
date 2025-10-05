@@ -10,7 +10,7 @@ import { randomUUID, createHash } from "crypto";
 import { getUserCorrections } from "../../user.corrections";
 import { enforceAiLimit } from "../../../../lib/AiLimitHandler/auth";
 
-const BUCKET = process.env.PDF_BUCKET ?? "user-images";
+const BUCKET = process.env.BUCKET!;
 const MAX_PDF_SIZE = Number(process.env.MAX_PDF_SIZE ?? 20 * 1024 * 1024); // 20MB
 const ALLOWED_MIME = new Set(["application/pdf"]);
 

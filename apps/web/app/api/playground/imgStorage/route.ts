@@ -9,7 +9,7 @@ import { categorizeImage, bufferToBase64 } from "@repo/ai";
 import { getUserCorrections } from "../../user.corrections";
 import { enforceAiLimit } from "../../../../lib/AiLimitHandler/auth";
 
-const BUCKET = "user-images";
+const BUCKET = process.env.BUCKET!;
 const MAX_IMG_SIZE = 6 * 1024 * 1024; // ~6MB
 const ALLOWED_MIME = new Set(["image/jpeg", "image/png"]);
 
