@@ -439,7 +439,7 @@
   height: 24px;
   border-radius: 999px;
   border: 1px solid rgba(255,255,255,0.18);
-  background: rgba(0,0,0,0.55);
+  background: rgba(0,0,0,0.62) !important;
   color: #fff;
   display: flex;
   align-items: center;
@@ -448,6 +448,11 @@
 .imageInfoBtn:hover {
   background: rgba(16,185,129,0.92) !important;
   border-color: rgba(16,185,129,0.92) !important;
+}
+
+.docInfoWrap .imageInfoBtn {
+  background: rgba(0,0,0,0.62);
+  border-color: rgba(255,255,255,0.28);
 }
 
 .imageCopyBtn:hover {

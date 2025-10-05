@@ -459,12 +459,14 @@ export function GalaxyFolder({
                 href={doc.signedUrl || "#"}
                 target="_blank"
                 rel="noreferrer"
-                title={doc.objectKey || "Document"}
               >
                 <div className={styles.docThumb}>
-                  <div className={styles.docIconWrap} aria-hidden>
-                    <DocumentTextIcon className={styles.docIcon} />
-                  </div>
+                  <DocFirstPageThumb
+                    url={doc.signedUrl || ""}
+                    fallbackIcon={
+                      <DocumentTextIcon className={styles.docIcon} />
+                    }
+                  />
                   <div className={styles.docBadge}>PDF</div>
                   {/* Controls: copy (URL), info, delete - same positions as images */}
                   <button
@@ -540,6 +542,7 @@ export function GalaxyFolder({
                     <ArrowDownTrayIcon className={styles.infoIcon} />
                   </button>
                   <DocInfoButton
+                    documentId={doc.id}
                     reasoning={(doc as any).reasoning ?? null}
                     alternatives={(doc as any).alternatives ?? []}
                   />
@@ -717,10 +720,87 @@ function ImageInfoButton({
   );
 }
 
+function DocFirstPageThumb({
+  url,
+  fallbackIcon,
+}: {
+  url: string;
+  fallbackIcon: React.ReactNode;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    async function render() {
+      try {
+        if (!url) throw new Error("no url");
+        // Lazy-load UMD build via CDN to avoid bundler deps
+        const ensurePdfJs = async () => {
+          if (typeof window === "undefined") return null as any;
+          const w = window as any;
+          if (w.pdfjsLib) return w.pdfjsLib as any;
+          await new Promise<void>((resolve, reject) => {
+            const s = document.createElement("script");
+            s.src =
+              "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js";
+            s.onload = () => resolve();
+            s.onerror = () => reject(new Error("pdfjs load failed"));
+            document.head.appendChild(s);
+          });
+          const lib = (window as any).pdfjsLib as any;
+          if (lib?.GlobalWorkerOptions)
+            lib.GlobalWorkerOptions.workerSrc =
+              "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js";
+          return lib;
+        };
+        const pdfjsLib: any = await ensurePdfJs();
+        if (!pdfjsLib) throw new Error("pdfjs missing");
+        const loadingTask = pdfjsLib.getDocument({
+          url,
+          withCredentials: false,
+        });
+        const pdf = await loadingTask.promise;
+        const page = await pdf.getPage(1);
+        const viewport = page.getViewport({ scale: 1.2 });
+        const canvas = canvasRef.current;
+        if (!canvas || cancelled) return;
+        canvas.width = Math.floor(viewport.width);
+        canvas.height = Math.floor(viewport.height);
+        const ctx = canvas.getContext("2d");
+        if (!ctx) throw new Error("no ctx");
+        await page.render({ canvasContext: ctx, viewport }).promise;
+      } catch {
+        if (!cancelled) setFailed(true);
+      }
+    }
+    render();
+    return () => {
+      cancelled = true;
+    };
+  }, [url]);
+  return failed ? (
+    <div className={styles.docIconWrap} aria-hidden>
+      {fallbackIcon}
+    </div>
+  ) : (
+    <canvas
+      ref={canvasRef}
+      style={{
+        width: "100%",
+        height: "140px",
+        objectFit: "cover",
+        display: "block",
+      }}
+    />
+  );
+}
+
 function DocInfoButton({
+  documentId,
   reasoning,
   alternatives,
 }: {
+  documentId: string;
   reasoning: string | null;
   alternatives: string[];
 }) {
@@ -821,7 +901,27 @@ function DocInfoButton({
                     </div>
                     <div className={styles.infoAltButtons}>
                       {alternatives.slice(0, 10).map((alt, idx) => (
-                        <button key={idx} className={styles.altBtn} disabled>
+                        <button
+                          key={idx}
+                          className={styles.altBtn}
+                          onClick={async (e) => {
+                            e.preventDefault();
+                            try {
+                              const res = await fetch("/api/dashboard", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({
+                                  action: "attachDocumentToFolder",
+                                  documentId,
+                                  folderName: alt,
+                                }),
+                              });
+                              if (!res.ok) return;
+                              setOpen(false);
+                              window.location.reload();
+                            } catch {}
+                          }}
+                        >
                           {alt}
                         </button>
                       ))}
