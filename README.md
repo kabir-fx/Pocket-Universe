@@ -26,7 +26,13 @@ A Turborepo-powered monorepo for a Next.js 15 app with authentication, Prisma/Po
 - **User Accounts**: Prisma models for `User`, `Account`, `Session`, `VerificationToken`
 - **Playground**: Create "planets" and organize them into "galaxies"
 - **Dashboard**: Authenticated view of your galaxies/planets with counts
-- **Shared UI**: Reusable components from `@repo/ui` (e.g., `SigninCard`, `DashboardLayout`)
+- **AI-Powered Content Organization**: Automatic categorization of PDFs, images, and text using Google Gemini AI
+- **File Storage**: Upload and organize PDFs and images with Supabase storage
+- **Smart Categorization**: AI suggests folder names based on content analysis and learns from user corrections
+- **Daily AI Limits**: 10 AI categorizations per day with usage tracking
+- **User Corrections System**: AI learns from user feedback to improve future categorizations
+- **Document Management**: Full-text search and organization of uploaded documents
+- **Image Gallery**: Upload and categorize images with AI-powered folder suggestions
 - **Monorepo DX**: Shared TS/ESLint configs and single install/build across apps/packages
 
 ## Auth Overview
@@ -49,6 +55,18 @@ Session strategy is JWT. The session callback augments `session.user` with `id`.
 - `GITHUB_ID`, `GITHUB_SECRET` — GitHub OAuth app creds (optional if not used)
 - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` — Google OAuth app creds (optional if not used)
 
+### AI & Storage Environment Variables (apps/web)
+
+- `GEMINI_API_KEY` — Google Gemini API key for AI categorization
+- `BUCKET` — Supabase storage bucket name
+- `NEXT_PUBLIC_SUPABASE_URL` — Supabase project URL
+- `SUPABASE_SERVICE_ROLE_KEY` — Supabase service role key for storage operations
+- `AI_DAILY_LIMIT` — Daily AI usage limit (default: 10)
+- `DOC_AI_MIN_CONFIDENCE` — Minimum confidence threshold for PDF AI categorization (default: 0.55)
+- `IMG_AI_MIN_CONFIDENCE` — Minimum confidence threshold for image AI categorization (default: 0.55)
+- `MAX_PDF_SIZE` — Maximum PDF file size in bytes (default: 20MB)
+- `MAX_IMG_SIZE` — Maximum image file size in bytes (default: 6MB)
+
 ## Database Schema
 
 Defined in `packages/db/prisma/schema.prisma`:
@@ -56,6 +74,9 @@ Defined in `packages/db/prisma/schema.prisma`:
 - `User` with optional `password` for credentials auth
 - `Account`, `Session`, `VerificationToken` for OAuth/NextAuth
 - Domain models: `Galaxy` and `Planet` with relations to `User`
+- `Document` for PDF storage with Supabase integration
+- `Image` for image storage with Supabase integration
+- `AICategorization` for tracking AI usage, suggestions, and user corrections
 
 ## API Routes (apps/web)
 
@@ -64,14 +85,29 @@ Defined in `packages/db/prisma/schema.prisma`:
 - `POST /api/auth/signup` — Create user with hashed password
 - `POST /api/playground/galaxyCheck` — Ensure a galaxy exists (create if missing)
 - `POST /api/playground/planetCreate` — Create a planet and (optionally) connect to a galaxy
+- `GET /api/playground/aiStatus` — Get current user's AI usage status and limits
+- `POST /api/playground/imgStorage` — Upload and categorize images with AI assistance
+- `POST /api/playground/pdfStorage` — Upload and categorize PDFs with AI assistance
 - `GET|POST /api/auth/[...nextauth]` — NextAuth handlers
 
 ## UI/Pages
 
 - Auth pages: `app/auth/signin`, `app/auth/signup` using `@repo/ui` cards
-- `app/playground` for creating content
-- `app/dashboard` for viewing user data
+- `app/playground` for creating content, uploading PDFs/images, and AI-powered organization
+- `app/dashboard` for viewing user data and organized content
 - Global `Providers` include `SessionProvider` and top navigation outside auth routes
+- `PlgCard` component supports text input, image uploads, PDF uploads, and AI categorization
+
+## AI Features
+
+The application uses Google Gemini AI for intelligent content categorization:
+
+- **PDF Categorization**: Analyzes PDF content using Gemini's file analysis capabilities
+- **Image Categorization**: Uses vision models to understand image content and suggest categories
+- **Smart Learning**: AI learns from user corrections to improve future suggestions
+- **Confidence Thresholds**: Configurable minimum confidence levels for automatic categorization
+- **Daily Limits**: Prevents abuse with configurable daily usage limits per user
+- **Fallback Handling**: Gracefully handles AI failures by allowing manual categorization
 
 ## Getting Started
 
